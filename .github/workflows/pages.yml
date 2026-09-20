@@ -29,7 +29,9 @@ jobs:
           mkdir _site
           cp index.html _site/
           node scripts/fetch-contests.mjs > _site/contests.json
-          head -c 300 _site/contests.json; echo
+          node scripts/fetch-npc.mjs > _site/npc.json
+          head -c 200 _site/contests.json; echo
+          head -c 200 _site/npc.json; echo
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

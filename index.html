@@ -129,6 +129,9 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   table.cardable .risk{justify-content:flex-start}
 }
 
+/* flips PNJ */
+.npch{margin:0 0 8px;font-size:15px;color:var(--gold)}
+
 /* favoris */
 .star{background:none;border:0;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:0 6px 0 0;vertical-align:middle}
 .star:hover{color:var(--gold)}
@@ -263,6 +266,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   <button class="tab on" data-tab="flips">🏆 Meilleurs flips</button>
   <button class="tab" data-tab="fav">⭐ Favoris <span id="favBadge" class="c-g"></span></button>
   <button class="tab" data-tab="plan">🧺 Plan de répartition</button>
+  <button class="tab" data-tab="npc">🏪 Flips PNJ</button>
   <button class="tab" data-tab="track">💼 Mon suivi <span id="trackBadge" class="c-o"></span></button>
   <button class="tab" data-tab="calendar">📅 Calendrier &amp; events</button>
   <button class="tab" data-tab="guide">📖 Guide débutant</button>
@@ -325,6 +329,19 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     </div>
   </div>
   <div id="planOut"></div>
+</section>
+
+<!-- ===== FLIPS PNJ ===== -->
+<section class="pane" id="pane-npc">
+  <div class="card" style="margin-bottom:14px">
+    <p style="margin:0 0 10px">Certains items se <b>revendent plus cher à un PNJ</b> (prix fixe, <b>sans taxe</b>) que ce qu'ils coûtent au Bazaar. Tu les achètes au Bazaar puis tu les vends au PNJ : pas de vente à attendre, donc beaucoup moins de risque qu'un flip classique. Avec ton budget actuel :</p>
+    <div class="warn" style="margin:0 0 12px">⚠️ <b>Plafond quotidien</b> : Hypixel limite les coins qu'on peut gagner en vendant aux PNJ (≈ <b>500M par jour</b> d'après les guides récents, remis à zéro à minuit heure de New York, et <b>plus bas pour les joueurs peu actifs</b>). Vérifie ta propre limite en jeu ; chaque fiche indique combien le flip en consomme.</div>
+    <div class="field" style="max-width:260px">
+      <label for="npcMin">Gain minimum par flip</label>
+      <select id="npcMin"><option value="1000">1 000 coins</option><option value="10000">10 000 coins</option><option value="100000">100 000 coins</option><option value="1000000">1 million</option></select>
+    </div>
+  </div>
+  <div id="npcOut"></div>
 </section>
 
 <!-- ===== SUIVI ===== -->
@@ -404,6 +421,18 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     </div>
 
     <div class="card">
+      <h3>Flips PNJ (onglet « 🏪 Flips PNJ »)</h3>
+      <p>Un PNJ rachète certains items à <b>prix fixe et sans taxe</b>. Si ce prix dépasse ce que l'item coûte au Bazaar, tu peux acheter au Bazaar puis revendre au PNJ. Contrairement à un flip normal, <b>il n'y a pas de vente à attendre</b> : le seul aléa est le remplissage de ton ordre d'achat.</p>
+      <ul>
+        <li><b>Achat instantané</b> : tu prends toutes les offres moins chères que le PNJ. Profit immédiat, mais limité par la profondeur du carnet (et des robots exploitent ces écarts en quelques secondes : c'est souvent vide).</li>
+        <li><b>Ordre d'achat</b> : plus de marge, mais il faut patienter le temps que ton ordre se remplisse.</li>
+      </ul>
+      <div class="warn"><b>Plafond quotidien</b> : les ventes aux PNJ sont limitées (≈ <b>500M de coins par jour</b> d'après les guides récents, remis à zéro à minuit heure de New York, et <b>plus bas pour les joueurs peu actifs</b>). Un joueur récent peut l'atteindre vite : vérifie ta limite en jeu. Chaque flip indique combien il en consomme.</div>
+      <div class="warn">Le prix PNJ vient de l'API items d'Hypixel et peut différer du jeu (item non revendable, prix changé). <b>Achète toujours 1 unité pour tester</b> avant de miser gros. Les écarts énormes (&gt; 30 %) sont signalés : ils cachent souvent un cas particulier.</div>
+      <p>Dans la fiche d'un flip classique, le prix PNJ sert aussi de <b>prix plancher</b> : si le marché s'effondre, tu sais combien tu récupères au minimum.</p>
+    </div>
+
+    <div class="card">
       <h3>Suivre tes flips (onglet « Mon suivi »)</h3>
       <p>Dans la fiche d'un item, clique sur <b>« ➕ Suivre ce flip »</b> après avoir posé tes ordres en jeu. La page compare ensuite ton prix au carnet d'ordres en direct :</p>
       <ul>
@@ -476,7 +505,7 @@ const HKEY = "wos_hist_v1", SKEY = "wos_cfg_v1";
 
 const cfg = Object.assign({
   budget: 5_000_000, tax: 0.0125, share: 0.2, cycleH: 1, maxRisk: 50, minVol: 20,
-  q: "", sort: "score", dir: -1, planN: 4
+  q: "", sort: "score", dir: -1, planN: 4, npcMin: 10000
 }, loadJSON(SKEY) || {});
 
 if(!(cfg.budget > 0)) cfg.budget = 5_000_000;
@@ -583,13 +612,18 @@ function histStats(id){
 
 /* ============================== ANALYSE ============================== */
 function buildBases(products){
-  const out = [];
+  const out = [], npcOut = [];
   for(const id in products){
     const p = products[id], q = p.quick_status;
     // NB : dans l'API Hypixel, sell_summary = ordres d'ACHAT (prix les plus hauts d'abord)
     //      et buy_summary = offres de VENTE (prix les plus bas d'abord).
     const bids = p.sell_summary, asks = p.buy_summary;
     if(!bids.length || !asks.length) continue;
+    if(npcMap[id]){      // candidats « revente au PNJ » : construits avant les filtres de spread (souvent des items sans écart Bazaar)
+      const bt = bids[0].pricePerUnit;
+      npcOut.push({id, name: npcMap[id].n || prettify(id), npc: npcMap[id].p, bidTop: bt, entry: r1(bt + 0.1),
+                   asks: asks.map(x => ({p: x.pricePerUnit, a: x.amount})), is: q.sellMovingWeek / HOURS_WEEK, ib: q.buyMovingWeek / HOURS_WEEK});
+    }
     const bidTop = bids[0].pricePerUnit, askTop = asks[0].pricePerUnit;
     const entry = r1(bidTop + 0.1), exit = r1(askTop - 0.1);
     if(!(exit > entry) || entry <= 0) continue;
@@ -608,6 +642,7 @@ function buildBases(products){
       mph: bzMap[id] ? bzMap[id].mph : null
     });
   }
+  npcBases = npcOut;
   return out;
 }
 
@@ -1122,6 +1157,7 @@ async function fetchAll(){
       bzMap = {};
       for(const x of bz) bzMap[x.id] = {name:x.name, mph:x.marginperhour};
     }
+    await npcReady;
     lastUpdated = hyp.lastUpdated;
     lastFetchOk = Date.now();
     bases = buildBases(hyp.products);
@@ -1202,6 +1238,7 @@ function render(){
   renderCalendar();
   renderTracker();
   renderFavs();
+  renderNpc();
   prefetchTop(rows);
   ensureSeeds(false);
 }
@@ -1488,6 +1525,7 @@ function openDetail(id){
               Compte <b>≈ ${fmtDur(d.tSell)}</b> pour tout vendre <span class="mut">(≈ ${fmt(b.ib)} achats instantanés /h sur cet item, dont tu captes ${(cfg.share*100).toFixed(0)} %)</span>.</li>
           <li>Profit net attendu : <b class="pos">+${full(d.profit)}</b> coins. Vérifie de temps en temps que tes ordres sont toujours en tête, sinon ajuste de 0,1.</li>
         </ol>
+        ${npcFloorNote(b, d)}
         <button class="btn gold trackbtn" data-track="${esc(b.id)}">➕ Suivre ce flip dans « Mon suivi »</button>
         <div class="warn" style="margin-top:12px">Les prix ont quelques dizaines de secondes de retard : <b>vérifie le carnet en jeu</b> avant de valider.
           Coussin de sécurité : le prix de revente peut baisser d'environ <b>${(cushion*100).toFixed(1)} %</b> avant que tu perdes de l'argent.
@@ -1518,6 +1556,179 @@ function openDetail(id){
       </div>
     </div>`;
   showDlg(); renderHistory(b);
+}
+
+/* ============================== FLIPS NPC ============================== */
+// Acheter au Bazaar, revendre au PNJ à prix fixe (aucune taxe). Deux façons d'acheter :
+//  - instantané : on avale les offres de vente moins chères que le PNJ (profit immédiat, limité par la profondeur du carnet)
+//  - par ordre d'achat : moins cher, mais il faut attendre que l'ordre se remplisse
+const NKEY = "wos_npc_v1";
+let npcMap = {};       // id -> {n: nom, p: prix de rachat PNJ}
+let npcBases = [];     // candidats reconstruits à chaque actualisation du Bazaar
+let npcReady = Promise.resolve();
+
+async function loadNpc(){
+  try{   // 1) petit fichier généré par le workflow (servi avec le site)
+    const r = await fetch("npc.json?" + Math.floor(Date.now()/3600e3), {cache:"no-store"});
+    if(r.ok){ const j = await r.json(); if(j && j.items && Object.keys(j.items).length){ npcMap = j.items; return; } }
+  }catch(e){}
+  const c = loadJSON(NKEY);   // 2) cache local (page ouverte hors GitHub Pages)
+  if(c && c.items && Date.now()-c.t < 24*3600e3){ npcMap = c.items; return; }
+  try{                        // 3) secours : fichier complet d'Hypixel (~5 Mo), réduit puis mis en cache
+    const r = await fetch("https://api.hypixel.net/v2/resources/skyblock/items");
+    if(r.ok){
+      const j = await r.json(), items = {};
+      for(const x of j.items || []) if(x.npc_sell_price > 0) items[x.id] = {n:x.name, p:x.npc_sell_price};
+      npcMap = items; saveJSON(NKEY, {t:Date.now(), items});
+    }
+  }catch(e){}
+}
+
+// achat instantané : on parcourt le carnet d'offres tant que le prix reste sous le prix PNJ
+function npcInstant(c, budget){
+  let units = 0, cost = 0, left = budget;
+  const used = [];
+  for(const lv of c.asks){
+    if(lv.p >= c.npc - 0.05) break;
+    const can = Math.min(lv.a, Math.floor(left/lv.p));
+    if(can <= 0) break;
+    units += can; cost += can*lv.p; left -= can*lv.p; used.push({p:lv.p, a:can});
+    if(can < lv.a) break;
+  }
+  if(units < 1) return null;
+  const profit = units*c.npc - cost;
+  return {units, cost, avg:cost/units, profit, roi:profit/cost, used};
+}
+
+// achat par ordre : prix = meilleur ordre + 0,1 ; le temps dépend du nombre de ventes instantanées par heure
+function npcOrder(c, budget){
+  if(!(c.npc > c.entry) || !(c.is > 0)) return null;
+  const fb = c.is*cfg.share, cap = Math.max(1, Math.floor(fb*cfg.cycleH));
+  const units = Math.min(Math.floor(budget/c.entry), cap);
+  if(units < 1) return null;
+  const tBuy = units/fb, tHours = Math.max(tBuy, 0.25);
+  const net = c.npc - c.entry, profit = units*net, roi = net/c.entry;
+  const risk = riskNpc(c, roi, tHours, units);
+  const o = {units, cost:units*c.entry, tBuy, tHours, profit, pph:profit/tHours, roi, risk};
+  o.score = o.pph * Math.pow((100 - risk.total)/100, 2);
+  return o;
+}
+
+function riskNpc(c, roi, tHours, units){
+  const reasons = [];
+  // écart énorme avec le PNJ : soit une vraie aubaine, soit un prix PNJ qui ne s'applique pas / un carnet piégé
+  const conf = clamp01((roi-0.30)/0.70)*100;
+  if(conf > 30) reasons.push("Écart de " + (roi*100).toFixed(0) + " % avec le prix PNJ : anormalement grand. Vérifie en jeu que le PNJ rachète bien cet item à ce prix (achète 1 unité pour tester).");
+  const liq = clamp01(Math.log(tHours/0.25)/Math.log(16))*100;
+  if(liq > 35) reasons.push("Il faut ≈ " + fmtDur(tHours) + " pour que ton ordre d'achat se remplisse (" + fmt(c.is) + " ventes instantanées /h seulement).");
+  const tick = c.entry < 10 ? 40 : 0;
+  if(tick) reasons.push("Prix unitaire très bas (" + price(c.entry) + " coin) : 0,1 coin de différence pèse beaucoup et la marge se joue à peu de choses.");
+  // plafond quotidien de ventes aux PNJ (≈ 500M/jour d'après les guides récents, plus bas pour les joueurs peu actifs)
+  const rev = units * c.npc, capS = clamp01((rev - 25e6)/475e6)*100;
+  if(capS > 0) reasons.push("Ce flip revend ≈ " + fmt(rev) + " coins au PNJ en un cycle : le plafond quotidien de ventes aux PNJ (≈ 500M de coins/jour, plus bas pour les joueurs peu actifs) peut te bloquer avant la fin. Vérifie ta limite en jeu.");
+  const weighted = .35*conf + .35*liq + .15*tick + .15*capS, worst = Math.max(conf, liq, tick, capS);
+  if(!reasons.length) reasons.push("Peu de risques : la revente au PNJ est à prix fixe, seule la vitesse de remplissage de ton ordre est incertaine.");
+  return {total: Math.max(5, Math.round(.6*weighted + .4*worst)), reasons};
+}
+
+function renderNpc(){
+  const el = $("#npcOut"); if(!el) return;
+  if(!npcBases.length){
+    el.innerHTML = Object.keys(npcMap).length
+      ? '<div class="card"><p style="margin:0">En attente des prix du Bazaar…</p></div>'
+      : '<div class="card"><p style="margin:0">Prix de revente PNJ indisponibles pour le moment (source : API items d\'Hypixel). Réessaie dans quelques minutes.</p></div>';
+    return;
+  }
+  const B = cfg.budget, min = cfg.npcMin, inst = [], ord = [];
+  if(!(B > 0)){ el.innerHTML = '<div class="empty">Entre un budget valide (ex : 5m).</div>'; return; }
+  for(const c of npcBases){
+    const a = npcInstant(c, B); if(a && a.profit >= min) inst.push({c, a});
+    const o = npcOrder(c, B);   if(o && o.profit >= min && o.risk.total <= cfg.maxRisk) ord.push({c, o});
+  }
+  inst.sort((x, y) => y.a.profit - x.a.profit);
+  ord.sort((x, y) => y.o.score - x.o.score);
+
+  const instRows = inst.slice(0, 40).map((x, i) => {
+    const {c, a} = x;
+    return '<tr data-npc="' + esc(c.id) + '" data-mode="instant"><td class="rank">' + (i+1) + '</td>'
+      + '<td><div class="iname">' + starBtn(c.id) + esc(c.name) + '</div><div class="iid">' + esc(c.id) + '</div></td>'
+      + '<td data-l="Bazaar (moyen) → PNJ">' + fmt(a.avg) + ' → ' + fmt(c.npc) + '</td>'
+      + '<td data-l="Marge" class="' + (a.roi > 0.30 ? 'c-o' : 'pos') + '" title="' + (a.roi > 0.30 ? 'Écart anormalement grand : teste 1 unité et vérifie le prix PNJ en jeu' : '') + '">' + (a.roi > 0.30 ? '⚠️ ' : '') + '+' + (a.roi*100).toFixed(1) + ' %</td>'
+      + '<td data-l="Quantité · coût">' + a.units.toLocaleString("fr-FR") + ' <span class="mut">· ' + fmt(a.cost) + '</span></td>'
+      + '<td data-l="Profit" class="gold"><b>' + fmt(a.profit) + '</b></td>'
+      + '<td data-l="Délai" class="mut">immédiat</td></tr>';
+  }).join("");
+  const ordRows = ord.slice(0, 40).map((x, i) => {
+    const {c, o} = x;
+    return '<tr data-npc="' + esc(c.id) + '" data-mode="order"><td class="rank">' + (i+1) + '</td>'
+      + '<td><div class="iname">' + starBtn(c.id) + esc(c.name) + '</div><div class="iid">' + esc(c.id) + '</div></td>'
+      + '<td data-l="Ordre d\'achat → PNJ">' + fmt(c.entry) + ' → ' + fmt(c.npc) + '</td>'
+      + '<td data-l="Marge" class="pos">+' + (o.roi*100).toFixed(1) + ' %</td>'
+      + '<td data-l="Ventes instantanées /h" class="mut">' + fmt(c.is) + '</td>'
+      + '<td data-l="Quantité · coût">' + o.units.toLocaleString("fr-FR") + ' <span class="mut">· ' + fmt(o.cost) + '</span></td>'
+      + '<td data-l="Remplissage">≈ ' + fmtDur(o.tBuy) + '</td>'
+      + '<td data-l="Profit /h" class="gold"><b>' + fmt(o.pph) + '</b></td>'
+      + '<td data-l="Profit /cycle" class="pos">' + fmt(o.profit) + '</td>'
+      + '<td data-l="Risque">' + riskHTML(o.risk) + '</td></tr>';
+  }).join("");
+
+  el.innerHTML =
+    '<h3 class="npch">⚡ Achat instantané → revente au PNJ <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(profit immédiat, sans attente)</span></h3>'
+    + (inst.length ? '<div class="tablewrap"><table class="cardable" style="min-width:820px"><thead><tr><th class="rank">#</th><th>Item</th><th>Bazaar (moyen) → PNJ</th><th>Marge</th><th>Quantité · coût</th><th>Profit</th><th>Délai</th></tr></thead><tbody>' + instRows + '</tbody></table></div>'
+        + '<p class="note">Profit unique : limité par le nombre d\'offres moins chères que le PNJ dans le carnet. Il se reforme de temps en temps, repasse voir régulièrement.</p>'
+      : '<div class="card"><p style="margin:0">Aucune opportunité instantanée au-dessus de ' + fmt(min) + ' de gain avec ce budget. C\'est normal : des robots exploitent ces écarts en quelques secondes. Baisse le « gain minimum » ou regarde les ordres d\'achat ci-dessous.</p></div>')
+    + '<h3 class="npch" style="margin-top:24px">🕓 Ordre d\'achat → revente au PNJ <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(plus de marge, il faut patienter)</span></h3>'
+    + (ord.length ? '<div class="tablewrap"><table class="cardable" style="min-width:980px"><thead><tr><th class="rank">#</th><th>Item</th><th>Ordre d\'achat → PNJ</th><th>Marge</th><th>Ventes inst. /h</th><th>Quantité · coût</th><th>Remplissage</th><th>Profit /h</th><th>Profit /cycle</th><th>Risque</th></tr></thead><tbody>' + ordRows + '</tbody></table></div>'
+        + '<p class="note">Classement par profit /h ajusté au risque, avec ta « part du marché » et ta « durée de cycle » des réglages. Le risque ne porte que sur la vitesse de remplissage et la fiabilité du prix PNJ : la revente, elle, est à prix fixe.</p>'
+      : '<div class="card"><p style="margin:0">Aucun ordre d\'achat ne dépasse ' + fmt(min) + ' de gain avec ton risque maximum (' + cfg.maxRisk + '). Baisse le « gain minimum » ou augmente le risque accepté.</p></div>');
+}
+
+function openNpcDetail(id, mode){
+  const c = npcBases.find(x => x.id === id); if(!c) return;
+  const dlg = $("#dlg");
+  dlg.dataset.id = "npc:" + id;
+  const r = mode === "instant" ? npcInstant(c, cfg.budget) : npcOrder(c, cfg.budget);
+  const head = '<div class="dhead"><div style="flex:1"><div style="font-size:20px;font-weight:700">' + starBtn(c.id) + esc(c.name) + '</div><div class="mut" style="font-size:12px">' + esc(c.id) + ' · flip PNJ ' + (mode === "instant" ? "instantané" : "par ordre d'achat") + '</div></div><button class="btn" data-close aria-label="Fermer">✕</button></div>';
+  if(!r){
+    dlg.innerHTML = head + '<div class="dbody"><p>Ce flip n\'est plus possible avec ton budget et les prix actuels.</p></div>';
+    if(!dlg.open) dlg.showModal(); return;
+  }
+  const revenue = r.units * c.npc, test = mode === "instant" ? c.asks[0].p : c.entry;
+  const kpis = mode === "instant"
+    ? '<div class="kpi"><b class="gold">' + fmt(r.profit) + '</b><span>profit net (aucune taxe PNJ)</span></div>'
+      + '<div class="kpi"><b>' + (r.roi*100).toFixed(1) + ' %</b><span>marge sur le capital</span></div>'
+      + '<div class="kpi"><b>' + r.units.toLocaleString("fr-FR") + ' × ' + fmt(r.avg) + '</b><span>quantité × prix moyen</span></div>'
+      + '<div class="kpi"><b>immédiat</b><span>aucune attente de remplissage</span></div>'
+    : '<div class="kpi"><b class="gold">' + fmt(r.pph) + ' /h</b><span>profit estimé /heure</span></div>'
+      + '<div class="kpi"><b class="pos">' + fmt(r.profit) + '</b><span>profit par cycle</span></div>'
+      + '<div class="kpi"><b>≈ ' + fmtDur(r.tBuy) + '</b><span>temps de remplissage estimé (entre ' + fmtDur(r.units/(c.is*0.35)) + ' et ' + fmtDur(r.units/(c.is*0.10)) + ')</span></div>'
+      + '<div class="kpi"><b>' + (r.roi*100).toFixed(1) + ' %</b><span>marge sur le capital</span></div>';
+  const steps = mode === "instant"
+    ? '<li><b>Teste d\'abord avec 1 unité</b> : achète-en une seule et regarde le prix de rachat du PNJ dans le jeu (il doit être ≈ <code>' + price(c.npc) + '</code>). Le prix vient de l\'API items d\'Hypixel : ne l\'achète pas en masse sans avoir vérifié.</li>'
+      + '<li>Ouvre le Bazaar (<code>/bz</code>), cherche <button class="btn" data-copy="' + esc(c.name) + '" style="padding:1px 8px">📋 ' + esc(c.name) + '</button> puis <b>Buy Instantly</b> : quantité <code>' + r.units.toLocaleString("fr-FR") + '</code> → coût <b>≈ ' + full(r.cost) + '</b> coins (prix moyen ' + price(r.avg) + ').</li>'
+      + '<li>Vends-les à un PNJ qui rachète cet item, à <code>' + price(c.npc) + '</code> coins pièce (<b>aucune taxe</b>) → tu encaisses <b>≈ ' + full(revenue) + '</b> coins.</li>'
+      + '<li>Profit net : <b class="pos">+' + full(r.profit) + '</b> coins.</li>'
+    : '<li><b>Teste d\'abord avec 1 unité</b> (voir avertissement ci-dessous) : vérifie que le PNJ rachète bien l\'item à ≈ <code>' + price(c.npc) + '</code>.</li>'
+      + '<li><b>Create Buy Order</b> : quantité <code>' + r.units.toLocaleString("fr-FR") + '</code> à <code>' + price(c.entry) + '</code> coins/unité (+0,1 au-dessus du meilleur ordre, ' + price(c.bidTop) + ') → coût <b>≈ ' + full(r.cost) + '</b> coins.</li>'
+      + '<li>Attends le remplissage (≈ ' + fmtDur(r.tBuy) + '), récupère les items (<i>Claim</i>).</li>'
+      + '<li>Vends-les au PNJ à <code>' + price(c.npc) + '</code> coins pièce (<b>sans taxe</b>) → <b>≈ ' + full(revenue) + '</b> coins, soit <b class="pos">+' + full(r.profit) + '</b> de profit net.</li>';
+  const depth = mode === "instant"
+    ? '<div><h3>Offres achetées (carnet)</h3><table style="min-width:0;font-size:12.5px"><thead><tr><th>Prix</th><th>Qté</th></tr></thead><tbody>' + r.used.slice(0, 8).map(l => '<tr><td>' + price(l.p) + '</td><td>' + l.a.toLocaleString("fr-FR") + '</td></tr>').join("") + '</tbody></table></div>'
+    : '<div><h3>Pourquoi ce niveau de risque ?</h3><ul class="reasons">' + r.risk.reasons.map(x => '<li>' + esc(x) + '</li>').join("") + '</ul></div>';
+  dlg.innerHTML = head + '<div class="dbody"><div class="hero-grid" style="margin:0">' + kpis + '</div>'
+    + '<div><h3>Étapes à suivre</h3><ol class="steps">' + steps + '</ol>'
+    + '<div class="warn" style="margin-top:12px">Le prix de rachat PNJ est lu dans l\'API items d\'Hypixel et peut différer de ce que tu vois en jeu (item non revendable, prix modifié…). Les prix du Bazaar ont aussi quelques dizaines de secondes de retard : <b>vérifie avant d\'acheter en quantité</b>. Ce flip revend <b>≈ ' + fmt(revenue) + '</b> coins au PNJ : compte-le dans ton <b>plafond quotidien de ventes aux PNJ</b> (≈ 500M/jour, plus bas si tu joues peu).</div></div>'
+    + depth + '</div>';
+  if(!dlg.open) dlg.showModal();
+}
+// prix plancher : le PNJ rachète toujours à ce prix, quoi qu'il arrive au Bazaar
+function npcFloorNote(b, d){
+  const m = npcMap[b.id]; if(!m || !d) return "";
+  const floor = (m.p - b.entry) * d.units;
+  const txt = floor >= 0
+    ? "même si le marché s'effondre, tu peux revendre au PNJ et gagner ≈ <b>" + fmt(floor) + "</b> coins sur cette quantité"
+    : "si le marché s'effondre, tu peux revendre au PNJ pour limiter la casse : perte plafonnée à ≈ <b>" + fmt(-floor) + "</b> coins sur cette quantité";
+  return '<div class="tip" style="margin-top:12px">🏪 Le PNJ rachète cet item <b>' + price(m.p) + '</b> coins pièce, <b>sans taxe</b> : c\'est un <b>prix plancher</b>. ' + txt + '. <span class="mut">(prix issu de l\'API items : vérifie-le en jeu)</span></div>';
 }
 
 /* ============================== FAVORIS ============================== */
@@ -1768,6 +1979,7 @@ function init(){
     if(name === "calendar"){ renderCalendar(); ensureSeeds(true); }
     if(name === "track") renderTracker();
     if(name === "fav"){ renderFavs(); renderFavSearch(); }
+    if(name === "npc") renderNpc();
   };
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showTab(t.dataset.tab)));
   renderStrip(); renderCalendar(); loadMayor(); loadJacob();
@@ -1781,6 +1993,8 @@ function init(){
   document.addEventListener("click", e=>{
     const fv = e.target.closest("[data-fav]");
     if(fv){ e.preventDefault(); toggleFav(fv.dataset.fav); if($("#favq")) renderFavSearch(); return; }
+    const nr = e.target.closest("tr[data-npc]");
+    if(nr && !e.target.closest("dialog")){ openNpcDetail(nr.dataset.npc, nr.dataset.mode); return; }
     if(e.target.closest("[data-gocal]")){ e.preventDefault(); showTab("calendar"); return; }
     const tr2 = e.target.closest("[data-track]");
     if(tr2){
@@ -1806,6 +2020,8 @@ function init(){
   });
   $("#refresh").addEventListener("click", fetchAll);
   $("#favq").addEventListener("input", renderFavSearch);
+  $("#npcMin").value = String(cfg.npcMin);
+  $("#npcMin").addEventListener("change", e => { cfg.npcMin = +e.target.value; persist(); renderNpc(); });
   $("#shareLink").addEventListener("click", async ()=>{
     const url = shareURL(), btn = $("#shareLink"), old = btn.textContent;
     try{ await navigator.clipboard.writeText(url); btn.textContent = "✔ Lien copié"; }
@@ -1813,6 +2029,7 @@ function init(){
     setTimeout(()=>btn.textContent = old, 1800);
   });
 
+  npcReady = loadNpc();
   fetchAll();
   setInterval(fetchAll, POLL_MS);
   setInterval(tickStatus, 1000);

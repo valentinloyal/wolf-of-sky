@@ -12,6 +12,7 @@ Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton b
 - Mesure de l'effet réel des événements sur le prix de chaque item (ex. Green Candy pendant le Spooky Festival)
 - Détection des écarts « gonflés » : la marge actuelle est comparée à sa valeur habituelle sur 24 h (série de 5 min), avec un profit /h prudent
 - **Mon suivi** : suis tes ordres en cours (dépassé ? sous-coté ?), profit réel et rythme moyen, notifications optionnelles
+- **Flips PNJ** 🏪 : acheter au Bazaar, revendre au PNJ à prix fixe et sans taxe (achat instantané ou par ordre), prix plancher dans les fiches
 - **Favoris** ⭐ : surveille des items même hors filtres, avec statut et notification quand un favori devient rentable
 - Prix d'ordres à 0,1 coin près, lien de partage des réglages, affichage en cartes sur mobile
 - Plan de répartition du budget sur plusieurs items, guide débutant
@@ -25,10 +26,11 @@ Voir [ROADMAP.md](ROADMAP.md) : liste d'ajouts potentiels notés par utilité et
 | Carnet d'ordres, volumes | [API Hypixel SkyBlock Bazaar](https://api.hypixel.net/skyblock/bazaar) (publique) et skyblock.bz |
 | Historique des prix | [Coflnet](https://sky.coflnet.com/) |
 | Maire | [API Hypixel](https://api.hypixel.net/v2/resources/skyblock/election) |
+| Prix de revente PNJ | [API items Hypixel](https://api.hypixel.net/v2/resources/skyblock/items) (réduit côté serveur par `scripts/fetch-npc.mjs`) |
 | Planning du Jacob's Contest (cultures) | [jacobs.strassburger.dev](https://jacobs.strassburger.dev/) (secours : api.elitebot.dev) |
 
 ## Fonctionnement
-Le site est un seul `index.html` sans dépendance. Le workflow [`pages.yml`](.github/workflows/pages.yml) le déploie sur GitHub Pages à chaque push **et toutes les heures**, pour récupérer côté serveur le planning du Jacob's Contest (`scripts/fetch-contests.mjs` → `contests.json`), car ces API ne permettent pas d'appels depuis un navigateur.
+Le site est un seul `index.html` sans dépendance. Le workflow [`pages.yml`](.github/workflows/pages.yml) le déploie sur GitHub Pages à chaque push **et toutes les heures**, pour récupérer côté serveur le planning du Jacob's Contest (`scripts/fetch-contests.mjs` → `contests.json`) et les prix PNJ (`scripts/fetch-npc.mjs` → `npc.json`), car ces API ne permettent pas d'appels depuis un navigateur.
 
 En local, ouvre simplement `index.html` : tout marche sauf les cultures du Jacob's Contest.
 
