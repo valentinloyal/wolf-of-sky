@@ -129,6 +129,13 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   table.cardable .risk{justify-content:flex-start}
 }
 
+/* favoris */
+.star{background:none;border:0;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:0 6px 0 0;vertical-align:middle}
+.star:hover{color:var(--gold)}
+.star.on{color:var(--gold)}
+.favres{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
+.favres:last-child{border-bottom:0}
+
 /* suivi */
 .posn.warn{border-color:var(--orange)}
 .posn.bad{border-color:var(--red)}
@@ -254,6 +261,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
 <nav class="tabs" role="tablist">
   <button class="tab on" data-tab="flips">🏆 Meilleurs flips</button>
+  <button class="tab" data-tab="fav">⭐ Favoris <span id="favBadge" class="c-g"></span></button>
   <button class="tab" data-tab="plan">🧺 Plan de répartition</button>
   <button class="tab" data-tab="track">💼 Mon suivi <span id="trackBadge" class="c-o"></span></button>
   <button class="tab" data-tab="calendar">📅 Calendrier &amp; events</button>
@@ -292,6 +300,16 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   </div>
   <p class="note">Clique sur une ligne pour voir le détail, les étapes à suivre en jeu et l'explication du risque.
     Les profits sont des <b>estimations théoriques</b> (voir le guide).</p>
+</section>
+
+<!-- ===== FAVORIS ===== -->
+<section class="pane" id="pane-fav">
+  <div class="card" style="margin-bottom:14px">
+    <label for="favq" class="mut" style="font-size:12px;display:block;margin-bottom:6px">Ajouter un item aux favoris</label>
+    <input id="favq" type="search" placeholder="ex : sunset, candy, griffin…" autocomplete="off" style="width:100%;max-width:420px">
+    <div id="favRes" style="margin-top:8px"></div>
+  </div>
+  <div id="favList"></div>
 </section>
 
 <!-- ===== PLAN ===== -->
@@ -395,6 +413,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
       </ul>
       <p>Tu peux activer les notifications du navigateur pour être prévenu quand un ordre doit être ajusté (la page doit rester ouverte). Tout est enregistré dans ton navigateur, rien n'est envoyé ailleurs.</p>
       <div class="tip">Les prix d'ordres sont affichés avec <b>1 décimale</b> (ex. 2 250 246,5) : au Bazaar, 0,1 coin suffit pour passer devant, tape le prix exact.</div>
+      <p><b>⭐ Favoris</b> : clique sur l'étoile d'un item (tableau, fiche, ou recherche de l'onglet Favoris) pour le surveiller. L'onglet les affiche <b>même s'ils ne passent pas tes filtres</b> (risque, volume, budget), avec un statut clair : rentable, marge faible, risque élevé, trop cher, pas rentable. Le nombre de favoris rentables est indiqué sur l'onglet, et tu peux être notifié quand l'un d'eux le devient.</p>
       <p>Le bouton <b>🔗 Partager</b> en haut copie un lien qui reprend tes réglages (budget, risque, durée de cycle…) : pratique pour l'envoyer à un ami.</p>
     </div>
 
@@ -1182,6 +1201,7 @@ function render(){
   renderStrip();
   renderCalendar();
   renderTracker();
+  renderFavs();
   prefetchTop(rows);
   ensureSeeds(false);
 }
@@ -1202,7 +1222,7 @@ function rowHTML(d,i){
   const b = d.b;
   return `<tr data-id="${esc(b.id)}">
     <td class="rank">${i+1}</td>
-    <td><div class="iname">${esc(b.name)}</div><div class="iid">${esc(b.id)}${vsUsual(b)}${evBadge(b)}</div></td>
+    <td><div class="iname">${starBtn(b.id)}${esc(b.name)}</div><div class="iid">${esc(b.id)}${vsUsual(b)}${evBadge(b)}</div></td>
     <td data-l="Achat → Vente" title="${price(b.entry)} → ${price(b.exit)}">${fmt(b.entry)} → ${fmt(b.exit)}</td>
     <td data-l="Marge nette" class="pos" title="+${full(d.net)} coins/unité après taxe">+${(d.roi*100).toFixed(1)} %</td>
     <td data-l="Volume /h (vente · achat)" class="mut" title="Ventes instantanées /h (remplit ton achat) · Achats instantanés /h (remplit ta vente)">${fmt(b.is)} · ${fmt(b.ib)}</td>
@@ -1439,7 +1459,7 @@ function openDetail(id){
   dlg.innerHTML = `
     <div class="dhead">
       <div style="flex:1">
-        <div style="font-size:20px;font-weight:700">${esc(b.name)}</div>
+        <div style="font-size:20px;font-weight:700">${starBtn(b.id)}${esc(b.name)}</div>
         <div class="mut" style="font-size:12px">${esc(b.id)}</div>
       </div>
       <div class="risk" style="min-width:0"><span class="rl c-${l.k}" style="font-size:14px">Risque ${l.label.toLowerCase()} · ${r.total}/100</span></div>
@@ -1498,6 +1518,83 @@ function openDetail(id){
       </div>
     </div>`;
   showDlg(); renderHistory(b);
+}
+
+/* ============================== FAVORIS ============================== */
+const FKEY = "wos_fav_v1";
+let favs = (loadJSON(FKEY) || []).filter(f => f && f.id);         // [{id, name}]
+const saveFavs = () => saveJSON(FKEY, favs);
+const isFav = id => favs.some(f => f.id === id);
+const favGood = new Set();
+function toggleFav(id){
+  const i = favs.findIndex(f => f.id === id);
+  if(i >= 0) favs.splice(i, 1);
+  else{ const b = bases.find(x => x.id === id); favs.push({id, name: b ? b.name : prettify(id)}); }
+  saveFavs();
+  document.querySelectorAll('[data-fav="' + CSS.escape(id) + '"]').forEach(el => { el.classList.toggle("on", isFav(id)); el.textContent = isFav(id) ? "★" : "☆"; });
+  render();
+}
+const starBtn = id => '<button class="star ' + (isFav(id) ? "on" : "") + '" data-fav="' + esc(id) + '" title="' + (isFav(id) ? "Retirer des favoris" : "Ajouter aux favoris") + '" aria-label="Favori">' + (isFav(id) ? "★" : "☆") + '</button>';
+
+const FAV_STATUS = {
+  good:   {rank:0, label:"✅ Rentable",        cls:"c-g"},
+  thin:   {rank:1, label:"Marge faible",        cls:"c-y"},
+  risky:  {rank:2, label:"⚠️ Risque élevé",    cls:"c-o"},
+  pricey: {rank:3, label:"Trop cher (budget)",  cls:"mut"},
+  neg:    {rank:4, label:"Pas rentable",        cls:"mut"},
+  none:   {rank:5, label:"Indisponible",        cls:"mut"}
+};
+function favInfo(f){
+  const b = bases.find(x => x.id === f.id);
+  if(!b) return {f, b:null, status:"none"};
+  const d = derive(b, cfg.budget);
+  if(!d) return {f, b, status:"neg"};
+  if(d.tooExpensive) return {f, b, d, status:"pricey"};
+  if(d.risk.total > cfg.maxRisk) return {f, b, d, status:"risky"};
+  if(d.roi < 0.03) return {f, b, d, status:"thin"};
+  return {f, b, d, status:"good"};
+}
+function renderFavs(){
+  const el = $("#favList"); if(!el) return;
+  const infos = favs.map(favInfo).sort((a, b) => FAV_STATUS[a.status].rank - FAV_STATUS[b.status].rank || ((b.d && b.d.pph) || 0) - ((a.d && a.d.pph) || 0));
+  const good = infos.filter(x => x.status === "good");
+  $("#favBadge").textContent = good.length ? "(" + good.length + ")" : "";
+  for(const x of good){                                    // un favori devient rentable : notification si la page est en arrière-plan
+    if(!favGood.has(x.f.id)){
+      favGood.add(x.f.id);
+      try{ if(document.hidden && window.Notification && Notification.permission === "granted") new Notification("Wolf of Sky — favori rentable", {body: x.f.name + " : marge nette " + (x.d.roi*100).toFixed(1) + " %, ≈ " + fmt(x.d.pph) + " /h"}); }catch(e){}
+    }
+  }
+  for(const id of [...favGood]) if(!good.some(x => x.f.id === id)) favGood.delete(id);
+  if(!favs.length){
+    el.innerHTML = '<div class="card"><p style="margin:0">Aucun favori pour l\'instant. Clique sur l\'étoile <b>☆</b> à côté d\'un item (dans le tableau, dans sa fiche, ou avec la recherche ci-dessus) pour le suivre ici, <b>même s\'il n\'est pas rentable</b> ou dépasse ton budget : tu verras dès qu\'il redevient intéressant.</p></div>';
+    return;
+  }
+  const rows = infos.map((x, i) => {
+    const st = FAV_STATUS[x.status], b = x.b, d = x.d;
+    const name = '<div class="iname">' + starBtn(x.f.id) + esc(b ? b.name : x.f.name) + '</div><div class="iid">' + esc(x.f.id) + (b ? vsUsual(b) + evBadge(b) : "") + '</div>';
+    const chip = '<span class="' + st.cls + '" style="font-weight:700">' + st.label + '</span>';
+    if(!b) return '<tr data-id="' + esc(x.f.id) + '"><td class="rank">' + (i+1) + '</td><td>' + name + '</td><td data-l="Statut">' + chip + '<div class="iid">carnet vide ou sans échanges</div></td><td></td><td></td><td></td><td></td><td></td></tr>';
+    const net = d ? d.roi : (b.exit*(1-cfg.tax) - b.entry) / b.entry;
+    const ok = d && !d.tooExpensive;
+    return '<tr data-id="' + esc(x.f.id) + '"><td class="rank">' + (i+1) + '</td><td>' + name + '</td>'
+      + '<td data-l="Statut">' + chip + (x.status === "pricey" ? '<div class="iid">1 unité ≈ ' + fmt(b.entry) + '</div>' : "") + '</td>'
+      + '<td data-l="Achat → Vente">' + fmt(b.entry) + ' → ' + fmt(b.exit) + '</td>'
+      + '<td data-l="Marge nette" class="' + (net > 0 ? "pos" : "neg") + '">' + (net > 0 ? "+" : "") + (net*100).toFixed(1) + ' %</td>'
+      + '<td data-l="Volume /h (vente · achat)" class="mut">' + fmt(b.is) + ' · ' + fmt(b.ib) + '</td>'
+      + '<td data-l="Profit /h" class="gold">' + (ok ? '<b>' + fmt(d.pph) + '</b>' : "–") + '</td>'
+      + '<td data-l="Risque">' + (ok ? riskHTML(d.risk) : "–") + '</td></tr>';
+  }).join("");
+  el.innerHTML = '<div class="tablewrap"><table class="cardable" style="min-width:860px"><thead><tr><th class="rank"></th><th>Item</th><th>Statut</th><th>Achat → Vente</th><th>Marge nette</th><th>Volume /h</th><th>Profit /h</th><th>Risque</th></tr></thead><tbody>'
+    + rows + '</tbody></table></div><p class="note">Les favoris sont affichés même s\'ils ne passent pas tes filtres (risque, volume, budget). Ils sont enregistrés dans ton navigateur.</p>';
+}
+function renderFavSearch(){
+  const q = $("#favq").value.trim().toLowerCase(), out = $("#favRes");
+  if(q.length < 2){ out.innerHTML = ""; return; }
+  const res = bases.filter(b => b.name.toLowerCase().includes(q) || b.id.toLowerCase().includes(q)).slice(0, 8);
+  out.innerHTML = res.length
+    ? res.map(b => '<div class="favres">' + starBtn(b.id) + '<span>' + esc(b.name) + '</span><span class="iid">' + esc(b.id) + '</span></div>').join("")
+    : '<div class="note">Aucun item trouvé (seuls les items avec un carnet d\'ordres actif sont proposés).</div>';
 }
 
 /* ============================== MON SUIVI (positions) ============================== */
@@ -1670,6 +1767,7 @@ function init(){
     document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on", p.id==="pane-"+name));
     if(name === "calendar"){ renderCalendar(); ensureSeeds(true); }
     if(name === "track") renderTracker();
+    if(name === "fav"){ renderFavs(); renderFavSearch(); }
   };
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showTab(t.dataset.tab)));
   renderStrip(); renderCalendar(); loadMayor(); loadJacob();
@@ -1681,6 +1779,8 @@ function init(){
     persist(); render();
   });
   document.addEventListener("click", e=>{
+    const fv = e.target.closest("[data-fav]");
+    if(fv){ e.preventDefault(); toggleFav(fv.dataset.fav); if($("#favq")) renderFavSearch(); return; }
     if(e.target.closest("[data-gocal]")){ e.preventDefault(); showTab("calendar"); return; }
     const tr2 = e.target.closest("[data-track]");
     if(tr2){
@@ -1705,6 +1805,7 @@ function init(){
     if(e.target.closest("[data-close]") || e.target===$("#dlg")) $("#dlg").close();
   });
   $("#refresh").addEventListener("click", fetchAll);
+  $("#favq").addEventListener("input", renderFavSearch);
   $("#shareLink").addEventListener("click", async ()=>{
     const url = shareURL(), btn = $("#shareLink"), old = btn.textContent;
     try{ await navigator.clipboard.writeText(url); btn.textContent = "✔ Lien copié"; }
