@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wolf of Sky — Bazaar Flipper</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2a3342; --text:#e6edf3; --muted:#8b98a9;
+  --gold:#f5c542; --gold-d:#b98d12; --green:#3fb950; --yellow:#e3b341; --orange:#f0883e; --red:#f85149; --blue:#58a6ff;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--blue)}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px 60px}
+
+/* header */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:18px 0 12px}
+h1{margin:0;font-size:22px;letter-spacing:.2px}
+h1 span{color:var(--gold)}
+.sub{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.status{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.live{background:var(--green);box-shadow:0 0 0 0 rgba(63,185,80,.6);animation:pulse 2s infinite}
+.dot.err{background:var(--red)}
+@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(63,185,80,0)}100%{box-shadow:0 0 0 0 rgba(63,185,80,0)}}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--gold-d)}
+.btn.gold{background:var(--gold);color:#241b00;border-color:var(--gold);font-weight:600}
+
+/* controls */
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:14px}
+.budget-row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12px;color:var(--muted)}
+.field .hint{font-size:11.5px;color:var(--muted)}
+input[type=text],input[type=search],select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--gold-d);outline-offset:0}
+#budget{font-size:20px;font-weight:600;width:230px;color:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.chip:hover,.chip.on{border-color:var(--gold);color:var(--gold)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.tog{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+
+/* tabs */
+.tabs{display:flex;gap:4px;margin:20px 0 14px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:9px 16px;color:var(--muted);cursor:pointer;font-weight:600}
+.tab.on{color:var(--gold);border-color:var(--gold)}
+.pane{display:none}.pane.on{display:block}
+
+/* hero */
+.hero{background:linear-gradient(135deg,#221c0a,var(--panel) 55%);border:1px solid var(--gold-d);border-radius:var(--r);padding:16px 18px;margin-bottom:16px}
+.hero h2{margin:0 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--gold)}
+.hero .name{font-size:22px;font-weight:700}
+.hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
+.kpi{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.kpi b{display:block;font-size:17px}
+.kpi span{font-size:11.5px;color:var(--muted)}
+.hero .go{margin-top:12px}
+
+/* table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+table{width:100%;border-collapse:collapse;min-width:980px}
+th,td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--panel2);font-size:12px;color:var(--muted);font-weight:600;user-select:none}
+th[data-sort]{cursor:pointer}
+th[data-sort]:hover{color:var(--gold)}
+th.sorted{color:var(--gold)}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+.rank{color:var(--muted);width:32px}
+.iname{font-weight:600}
+.iid{font-size:11px;color:var(--muted)}
+.pos{color:var(--green)}.neg{color:var(--red)}.mut{color:var(--muted)}
+.gold{color:var(--gold)}
+
+/* risk badge */
+.risk{display:inline-flex;align-items:center;gap:8px;min-width:118px;justify-content:flex-end}
+.rbar{width:46px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.rbar i{display:block;height:100%}
+.rl{font-size:12px;font-weight:700}
+.c-g{color:var(--green)}.c-y{color:var(--yellow)}.c-o{color:var(--orange)}.c-r{color:var(--red)}
+.b-g{background:var(--green)}.b-y{background:var(--yellow)}.b-o{background:var(--orange)}.b-r{background:var(--red)}
+
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.note{color:var(--muted);font-size:12.5px;margin:10px 2px}
+
+/* dialog */
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--gold-d);border-radius:14px;padding:0;width:min(760px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+.dhead{display:flex;align-items:start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}
+.dbody{padding:16px 18px;display:grid;gap:18px}
+.dbody h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--gold)}
+.steps{margin:0;padding-left:20px;display:grid;gap:8px}
+.steps code,.mono{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.parts{display:grid;gap:8px}
+.part{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;font-size:13px}
+.part .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.part .bar i{display:block;height:100%}
+.reasons{margin:8px 0 0;padding-left:18px;color:var(--text)}
+.reasons li{margin:3px 0}
+.books{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.books table{min-width:0;font-size:12.5px}
+.books th,.books td{padding:4px 8px}
+.books th:first-child,.books td:first-child{text-align:left}
+@media(max-width:640px){.books{grid-template-columns:1fr}.part{grid-template-columns:110px 1fr 34px}}
+
+/* guide */
+.guide{display:grid;gap:14px;max-width:900px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:16px;color:var(--gold)}
+.card p{margin:6px 0}
+.card ul{margin:6px 0;padding-left:20px}
+.card li{margin:4px 0}
+.gtable{width:100%;min-width:0;font-size:13px}
+.gtable th,.gtable td{text-align:left;white-space:normal;padding:6px 8px}
+.warn{border-left:3px solid var(--orange);padding:6px 12px;background:rgba(240,136,62,.08);border-radius:0 6px 6px 0;margin:8px 0}
+.tip{border-left:3px solid var(--green);padding:6px 12px;background:rgba(63,185,80,.08);border-radius:0 6px 6px 0;margin:8px 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:0 2px 10px;align-items:center}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--c)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>🐺 Wolf of <span>Sky</span> — Bazaar Flipper</h1>
+    <div class="sub">Trouve le meilleur flip pour ton budget, avec le niveau de risque.</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusTxt">Chargement…</span></div>
+  <button class="btn" id="refresh" title="Recharger les prix maintenant">↻ Actualiser</button>
+</header>
+
+<section class="controls">
+  <div class="budget-row">
+    <div class="field">
+      <label for="budget">💰 Ton argent disponible (coins)</label>
+      <input id="budget" type="text" inputmode="text" autocomplete="off" placeholder="ex : 5m, 250k, 1.2b">
+      <span class="hint" id="budgetHint"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="opts">
+    <div class="field">
+      <label for="maxRisk">Risque maximum accepté : <b id="maxRiskV"></b></label>
+      <input id="maxRisk" type="range" min="10" max="100" step="5">
+    </div>
+    <div class="field">
+      <label for="cycleH">Durée visée d'un cycle</label>
+      <select id="cycleH">
+        <option value="0.5">30 min (rapide)</option>
+        <option value="1">1 heure</option>
+        <option value="2">2 heures</option>
+        <option value="4">4 heures</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="share">Part du marché que tu captes</label>
+      <select id="share">
+        <option value="0.1">10 % (très prudent)</option>
+        <option value="0.2">20 % (réaliste)</option>
+        <option value="0.35">35 % (optimiste)</option>
+        <option value="0.5">50 % (très optimiste)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="tax">Taxe Bazaar</label>
+      <select id="tax">
+        <option value="0.0125">1,25 % (par défaut)</option>
+        <option value="0.01125">1,125 % (amélioration niv.1)</option>
+        <option value="0.01">1 % (amélioration max)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="minVol">Volume min. (unités/heure)</label>
+      <select id="minVol">
+        <option value="5">5</option><option value="20">20</option><option value="50">50</option>
+        <option value="150">150</option><option value="500">500</option><option value="2000">2 000</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="q">Rechercher un item</label>
+      <input id="q" type="search" placeholder="ex : dragon, enchanted…">
+    </div>
+  </div>
+</section>
+
+<nav class="tabs" role="tablist">
+  <button class="tab on" data-tab="flips">🏆 Meilleurs flips</button>
+  <button class="tab" data-tab="plan">🧺 Plan de répartition</button>
+  <button class="tab" data-tab="guide">📖 Guide débutant</button>
+</nav>
+
+<!-- ===== FLIPS ===== -->
+<section class="pane on" id="pane-flips">
+  <div id="hero"></div>
+  <div class="legend">
+    Risque :
+    <span style="--c:var(--green)">Faible (&lt;25)</span>
+    <span style="--c:var(--yellow)">Modéré (25-44)</span>
+    <span style="--c:var(--orange)">Élevé (45-64)</span>
+    <span style="--c:var(--red)">Très élevé (≥65)</span>
+    <span class="spacer"></span>
+    <span id="histInfo" style="--c:transparent"></span>
+  </div>
+  <div class="tablewrap">
+    <table id="tbl">
+      <thead><tr>
+        <th class="rank">#</th>
+        <th data-sort="name">Item</th>
+        <th data-sort="entry">Achat → Vente</th>
+        <th data-sort="roi">Marge nette</th>
+        <th data-sort="flow">Volume /h</th>
+        <th data-sort="invested">Quantité · investi</th>
+        <th data-sort="tHours">Durée cycle</th>
+        <th data-sort="pph">Profit /h</th>
+        <th data-sort="profit">Profit /cycle</th>
+        <th data-sort="risk">Risque</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <p class="note">Clique sur une ligne pour voir le détail, les étapes à suivre en jeu et l'explication du risque.
+    Les profits sont des <b>estimations théoriques</b> (voir le guide).</p>
+</section>
+
+<!-- ===== PLAN ===== -->
+<section class="pane" id="pane-plan">
+  <div class="card" style="margin-bottom:14px">
+    <p style="margin:0 0 10px">Mettre tout ton argent dans un seul item est risqué et souvent inefficace : le marché ne peut absorber qu'un certain nombre d'unités par heure.
+    Ce plan répartit ton budget sur plusieurs flips (meilleur score ajusté au risque d'abord).</p>
+    <div class="opts" style="grid-template-columns:repeat(auto-fit,minmax(200px,260px))">
+      <div class="field">
+        <label for="planN">Nombre d'items différents</label>
+        <select id="planN"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select>
+      </div>
+    </div>
+  </div>
+  <div id="planOut"></div>
+</section>
+
+<!-- ===== GUIDE ===== -->
+<section class="pane" id="pane-guide">
+  <div class="guide">
+
+    <div class="card">
+      <h3>1. Le Bazaar, c'est quoi ?</h3>
+      <p>Le <b>Bazaar</b> est un marché entre joueurs (commande <span class="mono">/bz</span>) où l'on achète et vend des items « empilables » (matériaux, enchantements, fragments…). Contrairement à l'Auction House, il n'y a pas d'enchères : il y a un <b>carnet d'ordres</b> avec des acheteurs qui veulent acheter moins cher, et des vendeurs qui veulent vendre plus cher.</p>
+      <p>Il existe donc <b>toujours deux prix</b> pour un même item, et l'écart entre les deux s'appelle le <b>spread</b>. Le flipping consiste à gagner ce spread.</p>
+    </div>
+
+    <div class="card">
+      <h3>2. Les 4 façons d'acheter / vendre</h3>
+      <div style="overflow-x:auto"><table class="gtable">
+        <thead><tr><th>Action</th><th>Ce que ça fait</th><th>Prix</th><th>Vitesse</th></tr></thead>
+        <tbody>
+          <tr><td><b>Instant Buy</b></td><td>Tu achètes tout de suite aux vendeurs</td><td>Le plus <b>haut</b> (prix des offres de vente)</td><td>Immédiat</td></tr>
+          <tr><td><b>Buy Order</b></td><td>Tu poses une offre d'achat et tu attends qu'un joueur te vende</td><td>Le plus <b>bas</b> (tu fixes le prix)</td><td>Lent</td></tr>
+          <tr><td><b>Instant Sell</b></td><td>Tu vends tout de suite aux acheteurs</td><td>Le plus <b>bas</b></td><td>Immédiat</td></tr>
+          <tr><td><b>Sell Offer</b></td><td>Tu poses une offre de vente et tu attends qu'un joueur achète</td><td>Le plus <b>haut</b> (tu fixes le prix)</td><td>Lent</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tip"><b>Le flip = Buy Order + Sell Offer.</b> Tu achètes par ordre (prix bas), tu revends par offre (prix haut) et tu empoches la différence. C'est ce que calcule cet outil. Acheter en Instant Buy puis revendre en Instant Sell fait perdre de l'argent (tu paies le spread à l'envers).</div>
+    </div>
+
+    <div class="card">
+      <h3>3. Un exemple concret</h3>
+      <ul>
+        <li>Meilleur ordre d'achat existant : <b>1 000</b> coins → tu poses le tien à <b>1 000,1</b> (pour passer devant).</li>
+        <li>Meilleure offre de vente existante : <b>1 200</b> coins → tu poses la tienne à <b>1 199,9</b> (pour passer devant).</li>
+        <li>Taxe de 1,25 % sur la vente : 1 199,9 × 0,9875 = <b>1 184,9</b> coins reçus.</li>
+        <li>Profit par unité : 1 184,9 − 1 000,1 = <b>≈ 184,8 coins</b> (≈ 18 %). Sur 1 000 unités : ≈ 184 800 coins.</li>
+      </ul>
+      <p>Chaque coin ajouté au prix te fait passer devant les autres joueurs : c'est le « <b>undercut</b> ». Comme tout le monde le fait, il faut parfois re-ajuster tes prix.</p>
+    </div>
+
+    <div class="card">
+      <h3>4. La taxe</h3>
+      <p>Toute vente au Bazaar est taxée de <b>1,25 %</b> (calculée sur le prix de vente, retirée quand tu récupères tes coins). Elle peut descendre à 1,125 % puis 1 % avec les améliorations de la communauté (à vérifier en jeu). Une marge brute de 2 % devient donc ≈ 0,75 % net : très fragile.</p>
+      <p>Formule utilisée ici : <span class="mono">profit = prix de vente × (1 − taxe) − prix d'achat</span></p>
+    </div>
+
+    <div class="card">
+      <h3>5. Comment lire le tableau</h3>
+      <ul>
+        <li><b>Achat → Vente</b> : les prix auxquels tu places tes ordres (déjà +0,1 / −0,1 pour passer devant).</li>
+        <li><b>Marge nette</b> : gain par unité après taxe, en % de ce que tu as investi.</li>
+        <li><b>Volume /h</b> : nombre d'unités vendues en instantané / achetées en instantané par heure (moyenne des 7 derniers jours ÷ 168). Ce sont ces transactions instantanées qui remplissent tes ordres.</li>
+        <li><b>Quantité · investi</b> : combien d'unités acheter avec ton budget, plafonné pour que l'achat + la revente tiennent dans la durée de cycle choisie.</li>
+        <li><b>Durée cycle</b> : temps estimé pour remplir ton achat puis ta vente (en supposant que tu captes seulement une part du marché).</li>
+        <li><b>Profit /h</b> : profit du cycle ÷ durée. C'est le critère « argent rapide ».</li>
+        <li><b>Tri par défaut</b> : le tableau est classé par « profit /h ajusté au risque » (le profit est fortement réduit quand le risque monte), pour ne pas te pousser vers des flips lucratifs mais piégeux. Clique sur « Profit /h » pour classer par gain brut.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>6. Le score de risque (0 à 100)</h3>
+      <p>Il combine 4 facteurs, et le maillon le plus faible pèse fortement (un seul gros défaut suffit à rendre le flip risqué) :</p>
+      <ul>
+        <li><b>Manipulation / prix suspect</b> : marge brute anormalement grande (&gt; 15 %) ou prix du haut du carnet très éloigné du prix moyen pondéré (un ordre isolé ou un piège). Les marges « trop belles » sont presque toujours des pièges.</li>
+        <li><b>Liquidité</b> : combien de temps il faudrait pour acheter puis revendre ta quantité. Plus c'est long, plus tu es exposé aux variations de prix.</li>
+        <li><b>Marge fragile</b> : si la marge nette est faible (&lt; 4 %), une petite baisse de prix ou un undercut efface ton gain.</li>
+        <li><b>Volatilité / tendance</b> : déséquilibre entre ventes et achats instantanés (pression vendeuse = risque de baisse) et, une fois l'historique collecté par la page, amplitude et baisse récente du prix.</li>
+      </ul>
+      <div class="warn">L'historique de prix se construit pendant que la page reste ouverte (sauvegardé dans ton navigateur). Les premières minutes, la volatilité est estimée uniquement avec le déséquilibre ventes/achats.</div>
+    </div>
+
+    <div class="card">
+      <h3>7. Les vrais risques (et comment les éviter)</h3>
+      <ul>
+        <li><b>Manipulation</b> : des joueurs posent des ordres absurdes pour faire croire à une grosse marge. <i>→ Méfie-toi des marges &gt; 25 % ; regarde toujours le carnet en jeu avant d'acheter.</i></li>
+        <li><b>Crash de prix</b> : si le prix chute pendant que tu détiens l'item (mise à jour du jeu, nouvel event…), tu peux perdre plus que ta marge. <i>→ Évite de laisser des ordres pendant des heures / la nuit, surtout sur les items en tendance baissière.</i></li>
+        <li><b>Illiquidité</b> : tu achètes mais personne n'achète ta revente → argent bloqué. <i>→ Privilégie les items à gros volume, surtout au début.</i></li>
+        <li><b>Concurrence</b> : d'autres joueurs (et bots) te passent devant à 0,1 coin près. <i>→ Vérifie ton rang de temps en temps et ajuste.</i></li>
+        <li><b>Données en retard</b> : l'API se met à jour toutes les ~20-60 s. <i>→ Compare toujours avec le prix affiché en jeu avant de valider.</i></li>
+        <li><b>Concentration</b> : tout miser sur un item. <i>→ Utilise l'onglet « Plan de répartition ».</i></li>
+      </ul>
+      <div class="tip"><b>Règles d'or pour débuter :</b> commence avec un petit montant (10-20 % de ton budget) pour comprendre le rythme ; choisis un risque « Faible » ou « Modéré » ; ne mets jamais plus de ~30-40 % de ton budget sur un seul item ; vérifie le carnet en jeu avant chaque ordre ; réinvestis progressivement tes gains.</div>
+    </div>
+
+    <div class="card">
+      <h3>8. Limites de cet outil</h3>
+      <ul>
+        <li>Les profits /h sont des <b>estimations</b> : elles supposent que tu captes une part fixe du volume moyen de la semaine et que les prix restent stables. La réalité peut être meilleure ou bien pire.</li>
+        <li>Ce n'est pas un conseil financier, juste un calcul sur des données publiques. Les coins de jeu ne sont pas de l'argent réel, mais le temps que tu y passes compte !</li>
+        <li>La limite du nombre d'ordres simultanés du Bazaar t'empêche de flipper des dizaines d'items à la fois : privilégie la qualité.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>9. D'où viennent les données</h3>
+      <ul>
+        <li>Carnet d'ordres et volumes : <a href="https://api.hypixel.net/skyblock/bazaar" target="_blank" rel="noopener">API officielle Hypixel SkyBlock Bazaar</a> (publique, sans clé). skyblock.bz utilise ces mêmes données.</li>
+        <li>Noms d'items et comparaison : <a href="https://skyblock.bz/flips" target="_blank" rel="noopener">skyblock.bz/flips</a>.</li>
+        <li>Pour aller plus loin : <a href="https://sky.coflnet.com/guides/how-to-flip" target="_blank" rel="noopener">guide du flipping (Coflnet)</a>, <a href="https://sky.coflnet.com/guides/avoid-taxes-and-losses" target="_blank" rel="noopener">éviter taxes et pertes</a>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<dialog id="dlg"></dialog>
+
+<script>
+"use strict";
+/* ============================== CONFIG / STATE ============================== */
+const HYP_URL = "https://api.hypixel.net/skyblock/bazaar";
+const BZ_URL  = "https://api.skyblock.bz/api/flips";
+const POLL_MS = 30000;
+const HOURS_WEEK = 168;
+const MAX_ROWS = 100;
+const HKEY = "wos_hist_v1", SKEY = "wos_cfg_v1";
+
+const cfg = Object.assign({
+  budget: 5_000_000, tax: 0.0125, share: 0.2, cycleH: 1, maxRisk: 50, minVol: 20,
+  q: "", sort: "score", dir: -1, planN: 4
+}, loadJSON(SKEY) || {});
+
+if(!(cfg.budget > 0)) cfg.budget = 5_000_000;
+let bases = [];          // produits analysés (indépendants du budget)
+let bzMap = {};          // id -> {name, mph}
+let lastUpdated = 0;     // timestamp Hypixel
+let lastFetchOk = 0;
+let rowsCache = [];      // dernières lignes affichées (pour le détail)
+
+/* ============================== UTILS ============================== */
+function loadJSON(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function saveJSON(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+const $ = s => document.querySelector(s);
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r1 = x => Math.round(x*10)/10;
+
+function fmt(n){
+  const a = Math.abs(n), s = n<0?"-":"";
+  if(a>=1e9) return s+(a/1e9).toFixed(2)+"B";
+  if(a>=1e6) return s+(a/1e6).toFixed(2)+"M";
+  if(a>=1e4) return s+(a/1e3).toFixed(1)+"k";
+  if(a>=1000) return s+Math.round(a).toLocaleString("fr-FR");
+  if(a>=100) return s+a.toFixed(0);
+  return s+a.toFixed(1);
+}
+const full = n => Math.round(n*10)/10 >= 1e3 ? Math.round(n).toLocaleString("fr-FR") : String(r1(n)).replace(".",",");
+function fmtDur(h){
+  if(h < 1/60) return "< 1 min";
+  if(h < 1) return Math.round(h*60)+" min";
+  return (Math.round(h*10)/10).toString().replace(".",",")+" h";
+}
+function parseMoney(str){
+  const m = String(str).trim().toLowerCase().replace(/\s/g,"").replace(",",".").match(/^([\d.]+)([kmb]?)$/);
+  if(!m) return NaN;
+  const mult = {"":1,k:1e3,m:1e6,b:1e9}[m[2]];
+  return parseFloat(m[1])*mult;
+}
+function prettify(id){
+  return id.replace(/^ENCHANTMENT_/,"").replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+}
+function riskLevel(r){
+  if(r<25) return {k:"g", label:"Faible"};
+  if(r<45) return {k:"y", label:"Modéré"};
+  if(r<65) return {k:"o", label:"Élevé"};
+  return {k:"r", label:"Très élevé"};
+}
+
+/* ============================== HISTORIQUE (volatilité) ============================== */
+let hist = loadJSON(HKEY) || {};
+let lastSample = 0;
+(function trimOld(){
+  const cut = Date.now() - 6*3600e3;
+  for(const id in hist){ hist[id] = hist[id].filter(s => s[0] > cut); if(!hist[id].length) delete hist[id]; }
+})();
+function recordHistory(){
+  if(!lastUpdated || lastUpdated - lastSample < 170e3) return;
+  lastSample = lastUpdated;
+  for(const b of bases){
+    if(Math.min(b.ib,b.is) < 10 || b.grossPct < 0.01) continue;
+    const a = hist[b.id] || (hist[b.id] = []);
+    a.push([lastUpdated, (b.entry+b.exit)/2]);
+    if(a.length > 72) a.shift();
+  }
+  saveJSON(HKEY, hist);
+}
+function histStats(id){
+  const a = hist[id];
+  if(!a || a.length < 3) return null;
+  const minutes = (a[a.length-1][0]-a[0][0])/60000;
+  if(minutes < 10) return null;
+  const v = a.map(s=>s[1]);
+  const max = Math.max(...v), min = Math.min(...v), avg = v.reduce((x,y)=>x+y,0)/v.length;
+  return {range:(max-min)/avg, drop:(max-v[v.length-1])/max, minutes};
+}
+
+/* ============================== ANALYSE ============================== */
+function buildBases(products){
+  const out = [];
+  for(const id in products){
+    const p = products[id], q = p.quick_status;
+    // NB : dans l'API Hypixel, sell_summary = ordres d'ACHAT (prix les plus hauts d'abord)
+    //      et buy_summary = offres de VENTE (prix les plus bas d'abord).
+    const bids = p.sell_summary, asks = p.buy_summary;
+    if(!bids.length || !asks.length) continue;
+    const bidTop = bids[0].pricePerUnit, askTop = asks[0].pricePerUnit;
+    const entry = r1(bidTop + 0.1), exit = r1(askTop - 0.1);
+    if(!(exit > entry) || entry <= 0) continue;
+    const is = q.sellMovingWeek / HOURS_WEEK;   // ventes instantanées /h -> remplissent ton ordre d'achat
+    const ib = q.buyMovingWeek  / HOURS_WEEK;   // achats instantanés /h -> remplissent ton offre de vente
+    if(!(is > 0) || !(ib > 0)) continue;
+    const o1 = q.sellPrice > 0 ? Math.abs(bidTop - q.sellPrice)/q.sellPrice : 0;
+    const o2 = q.buyPrice  > 0 ? Math.abs(askTop - q.buyPrice)/q.buyPrice   : 0;
+    out.push({
+      id, name: (bzMap[id] && bzMap[id].name) || prettify(id),
+      bidTop, askTop, entry, exit, is, ib,
+      grossPct: exit/entry - 1,
+      outlier: Math.max(o1,o2),
+      bids: bids.slice(0,5), asks: asks.slice(0,5),
+      mph: bzMap[id] ? bzMap[id].mph : null
+    });
+  }
+  return out;
+}
+
+function derive(b, budget){
+  const net = b.exit*(1-cfg.tax) - b.entry;
+  if(net <= 0) return null;
+  const roi = net / b.entry;
+  const fb = b.is*cfg.share, fs = b.ib*cfg.share;        // unités/h que TU obtiens
+  const cap = Math.max(1, Math.floor(Math.min(fb,fs)*cfg.cycleH));
+  const afford = Math.floor(budget / b.entry);
+  const units = Math.min(afford, cap);
+  if(units < 1) return {b, tooExpensive:true, roi, net};
+  const tBuy = units/fb, tSell = units/fs;
+  const tHours = Math.max(tBuy + tSell, 0.25);   // 15 min mini : temps de gérer/ajuster tes ordres
+  const profit = units*net;
+  const d = {b, units, cap, roi, net, tBuy, tSell, tHours, profit, pph: profit/tHours,
+             invested: units*b.entry, flow: Math.min(b.is,b.ib), limitedBy: afford < cap ? "budget" : "marché"};
+  d.risk = computeRisk(b, d);
+  d.score = d.pph * Math.pow((100 - d.risk.total)/100, 2);   // pénalité quadratique : un risque élevé écrase vite le score
+  return d;
+}
+
+function computeRisk(b, d){
+  const reasons = [];
+  // 1) manipulation / prix suspect
+  const marginS = clamp01((b.grossPct-0.15)/0.40)*100;
+  const outS = clamp01((b.outlier-0.02)/0.13)*100;
+  const manip = Math.max(marginS, outS);
+  if(marginS > 30) reasons.push(`Marge brute de ${(b.grossPct*100).toFixed(0)} % : anormalement élevée. Souvent un marché mort, un piège ou un carnet manipulé — vérifie en jeu avant d'acheter.`);
+  if(outS > 30) reasons.push(`Le meilleur prix du carnet s'écarte de ${(b.outlier*100).toFixed(0)} % du prix moyen pondéré : le haut du carnet est peu profond (un ordre isolé peut fausser le prix).`);
+  // 2) liquidité
+  const liq = clamp01(Math.log(d.tHours/0.25)/Math.log(16))*100;
+  if(liq > 35) reasons.push(`Il faudra ≈ ${fmtDur(d.tHours)} pour acheter puis revendre ${d.units.toLocaleString("fr-FR")} unités (≈ ${fmt(b.is)} ventes et ${fmt(b.ib)} achats instantanés /h seulement) : ton argent reste bloqué et exposé aux variations de prix.`);
+  // 3) marge fragile
+  const fragile = clamp01((0.08 - d.roi)/0.075)*100;
+  if(fragile > 35) reasons.push(`Marge nette de seulement ${(d.roi*100).toFixed(1)} % : une baisse de prix de ${(d.roi*100/(1+d.roi)).toFixed(1)} % ou un undercut efface ton profit.`);
+  // 4) volatilité / tendance
+  const lr = Math.log(b.ib/b.is);
+  const imbS = clamp01((Math.abs(lr)-Math.log(1.3))/(Math.log(4)-Math.log(1.3)))*100;
+  if(imbS > 35){
+    reasons.push(lr < 0
+      ? `Les joueurs vendent en instantané bien plus (×${(b.is/b.ib).toFixed(1)}) qu'ils n'achètent : pression vendeuse, le prix risque de baisser et ta revente sera plus lente.`
+      : `Les joueurs achètent en instantané bien plus (×${(b.ib/b.is).toFixed(1)}) qu'ils ne vendent : ton ordre d'achat sera long à remplir et le prix peut monter avant.`);
+  }
+  const h = histStats(b.id);
+  let histS = null;
+  if(h){
+    histS = Math.max(clamp01((h.range-0.02)/0.08)*100, clamp01((h.drop-0.02)/0.06)*100);
+    if(histS > 35) reasons.push(`Sur ${fmtDur(h.minutes/60)} d'historique, le prix a varié de ${(h.range*100).toFixed(1)} %${h.drop>0.02?` et a reculé de ${(h.drop*100).toFixed(1)} % depuis son pic`:""}.`);
+  }
+  const volat = histS == null ? imbS : 0.4*imbS + 0.6*histS;
+  const parts = {manip, liq, fragile, volat};
+  const weighted = .30*manip + .25*liq + .20*fragile + .25*volat;
+  const worst = Math.max(manip, liq, fragile, volat);
+  const total = Math.max(5, Math.round(.6*weighted + .4*worst));   // le risque zéro n'existe pas
+  if(!reasons.length) reasons.push("Aucun signal d'alerte majeur détecté (ça ne veut pas dire « sans risque » : vérifie toujours le carnet en jeu).");
+  return {total, parts, reasons, hasHist: !!h};
+}
+
+/* ============================== FETCH ============================== */
+async function fetchAll(){
+  setStatus("loading");
+  try{
+    const [hyp, bz] = await Promise.all([
+      fetch(HYP_URL, {cache:"no-store"}).then(r=>{ if(!r.ok) throw new Error("Hypixel HTTP "+r.status); return r.json(); }),
+      fetch(BZ_URL, {cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+    ]);
+    if(!hyp || !hyp.success) throw new Error("Réponse Hypixel invalide");
+    if(Array.isArray(bz)){
+      bzMap = {};
+      for(const x of bz) bzMap[x.id] = {name:x.name, mph:x.marginperhour};
+    }
+    lastUpdated = hyp.lastUpdated;
+    lastFetchOk = Date.now();
+    bases = buildBases(hyp.products);
+    recordHistory();
+    setStatus("ok");
+    render();
+  }catch(e){
+    console.error(e);
+    setStatus("err", e.message);
+  }
+}
+function setStatus(state, msg){
+  const dot = $("#dot"), t = $("#statusTxt");
+  dot.className = "dot" + (state==="ok"?" live":state==="err"?" err":"");
+  if(state==="loading" && !lastFetchOk) t.textContent = "Chargement des prix…";
+  if(state==="err") t.textContent = "Erreur : "+(msg||"réseau")+" — nouvel essai auto";
+}
+function tickStatus(){
+  if(!lastFetchOk) return;
+  const age = Math.round((Date.now()-lastUpdated)/1000);
+  $("#statusTxt").textContent = `Prix Hypixel il y a ${age<90?age+" s":Math.round(age/60)+" min"} · ${bases.length} items`;
+}
+
+/* ============================== RENDU ============================== */
+const SORTERS = {
+  score:(a,b)=>a.score-b.score, pph:(a,b)=>a.pph-b.pph, roi:(a,b)=>a.roi-b.roi, flow:(a,b)=>a.flow-b.flow,
+  invested:(a,b)=>a.invested-b.invested, tHours:(a,b)=>a.tHours-b.tHours, profit:(a,b)=>a.profit-b.profit,
+  risk:(a,b)=>a.risk.total-b.risk.total, entry:(a,b)=>a.b.entry-b.b.entry, name:(a,b)=>a.b.name.localeCompare(b.b.name)
+};
+
+function candidates(budget, opts={}){
+  const q = cfg.q.trim().toLowerCase();
+  const out = [];
+  for(const b of bases){
+    if(Math.min(b.is,b.ib) < cfg.minVol) continue;
+    if(q && !(b.name.toLowerCase().includes(q) || b.id.toLowerCase().includes(q))) continue;
+    const d = derive(b, budget);
+    if(!d || d.tooExpensive) continue;
+    if(!opts.ignoreRisk && d.risk.total > cfg.maxRisk) continue;
+    out.push(d);
+  }
+  return out;
+}
+
+function render(){
+  // header budget hint
+  $("#budgetHint").textContent = isFinite(cfg.budget) && cfg.budget>0 ? "= "+Math.round(cfg.budget).toLocaleString("fr-FR")+" coins" : "Montant invalide";
+  document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on", +c.dataset.v===cfg.budget));
+  $("#maxRiskV").textContent = cfg.maxRisk+" ("+riskLevel(cfg.maxRisk-1).label.toLowerCase()+" et moins)";
+
+  if(!bases.length){ return; }
+  if(!(cfg.budget > 0)){ $("#tbody").innerHTML = `<tr><td colspan="10" class="empty">Entre un budget valide (ex : 5m, 250k, 1.2b).</td></tr>`; $("#hero").innerHTML=""; $("#planOut").innerHTML=""; return; }
+  const budget = cfg.budget;
+  let rows = candidates(budget);
+  const key = cfg.sort;
+  const cmp = SORTERS[key] || SORTERS.score;
+  rows.sort((a,b)=>cfg.dir*cmp(a,b));
+  rowsCache = rows;
+
+  renderHero(rows);
+  document.querySelectorAll("th[data-sort]").forEach(th=>{
+    th.classList.toggle("sorted", th.dataset.sort===cfg.sort);
+  });
+  const tbody = $("#tbody");
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="10" class="empty">Aucun flip ne correspond. Essaie d'augmenter le <b>risque maximum</b>, de baisser le <b>volume minimum</b> ou de vérifier ton budget.</td></tr>`;
+  }else{
+    tbody.innerHTML = rows.slice(0,MAX_ROWS).map((d,i)=>rowHTML(d,i)).join("");
+  }
+  const tracked = Object.keys(hist).length;
+  const h = Object.values(hist).map(a=>a.length?(a[a.length-1][0]-a[0][0])/60000:0);
+  const maxMin = h.length?Math.max(...h):0;
+  $("#histInfo").textContent = maxMin>=10 ? `Historique : ${tracked} items suivis sur ${fmtDur(maxMin/60)}` : `Historique en cours de collecte (${tracked} items suivis)`;
+  renderPlan();
+  tickStatus();
+}
+
+function riskHTML(r){
+  const l = riskLevel(r.total);
+  return `<span class="risk" title="Score de risque ${r.total}/100"><span class="rl c-${l.k}">${l.label} · ${r.total}</span><span class="rbar"><i class="b-${l.k}" style="width:${Math.max(6,r.total)}%"></i></span></span>`;
+}
+
+function rowHTML(d,i){
+  const b = d.b;
+  return `<tr data-id="${esc(b.id)}">
+    <td class="rank">${i+1}</td>
+    <td><div class="iname">${esc(b.name)}</div><div class="iid">${esc(b.id)}</div></td>
+    <td title="${full(b.entry)} → ${full(b.exit)}">${fmt(b.entry)} → ${fmt(b.exit)}</td>
+    <td class="pos" title="+${full(d.net)} coins/unité après taxe">+${(d.roi*100).toFixed(1)} %</td>
+    <td class="mut" title="Ventes instantanées /h (remplit ton achat) · Achats instantanés /h (remplit ta vente)">${fmt(b.is)} · ${fmt(b.ib)}</td>
+    <td title="${d.units.toLocaleString("fr-FR")} unités — limité par le ${d.limitedBy}">${d.units.toLocaleString("fr-FR")} <span class="mut">· ${fmt(d.invested)}</span></td>
+    <td>${fmtDur(d.tHours)}</td>
+    <td class="gold" title="${full(d.pph)} coins/h"><b>${fmt(d.pph)}</b></td>
+    <td class="pos" title="${full(d.profit)} coins">${fmt(d.profit)}</td>
+    <td>${riskHTML(d.risk)}</td>
+  </tr>`;
+}
+
+function renderHero(rows){
+  const el = $("#hero");
+  if(!rows.length){ el.innerHTML=""; return; }
+  const top = rows.slice().sort((a,b)=>b.score-a.score)[0];
+  const b = top.b, l = riskLevel(top.risk.total);
+  el.innerHTML = `<div class="hero">
+    <h2>⭐ Meilleur choix pour ${fmt(cfg.budget)} coins</h2>
+    <div class="name">${esc(b.name)} <span class="c-${l.k}" style="font-size:14px">· risque ${l.label.toLowerCase()} (${top.risk.total}/100)</span></div>
+    <div class="hero-grid">
+      <div class="kpi"><b class="gold">${fmt(top.pph)} /h</b><span>profit estimé par heure</span></div>
+      <div class="kpi"><b>${fmt(top.profit)}</b><span>profit par cycle (${fmtDur(top.tHours)})</span></div>
+      <div class="kpi"><b>${top.units.toLocaleString("fr-FR")} × ${fmt(b.entry)}</b><span>quantité × prix d'achat</span></div>
+      <div class="kpi"><b>${(top.roi*100).toFixed(1)} %</b><span>marge nette après taxe</span></div>
+    </div>
+    <button class="btn gold go" data-open="${esc(b.id)}">Voir les étapes à suivre →</button>
+  </div>`;
+}
+
+/* ============================== PLAN ============================== */
+function renderPlan(){
+  const out = $("#planOut");
+  const n = cfg.planN, B = cfg.budget;
+  const cands = candidates(B).sort((a,b)=>b.score-a.score);
+  const capShare = Math.min(0.5, 1.6/n);
+  let remaining = B;
+  const picks = [];
+  for(const c of cands){
+    if(picks.length >= n) break;
+    const slice = Math.min(remaining, B*capShare);
+    const d = derive(c.b, slice);
+    if(!d || d.tooExpensive) continue;
+    picks.push(d);
+    remaining -= d.invested;
+  }
+  if(!picks.length){ out.innerHTML = `<div class="empty">Aucun flip disponible avec ces réglages.</div>`; return; }
+  const invested = picks.reduce((s,d)=>s+d.invested,0);
+  const pph = picks.reduce((s,d)=>s+d.pph,0);
+  const profit = picks.reduce((s,d)=>s+d.profit,0);
+  const wrisk = Math.round(picks.reduce((s,d)=>s+d.risk.total*d.invested,0)/invested);
+  const l = riskLevel(wrisk);
+  const unused = B - invested;
+  out.innerHTML = `
+    <div class="hero">
+      <h2>Plan sur ${picks.length} items</h2>
+      <div class="hero-grid">
+        <div class="kpi"><b class="gold">${fmt(pph)} /h</b><span>profit estimé total par heure</span></div>
+        <div class="kpi"><b>${fmt(invested)}</b><span>investi (${(invested/B*100).toFixed(0)} % du budget)</span></div>
+        <div class="kpi"><b class="pos">${fmt(profit)}</b><span>profit par cycle</span></div>
+        <div class="kpi"><b class="c-${l.k}">${l.label} · ${wrisk}</b><span>risque moyen pondéré</span></div>
+      </div>
+      ${unused > B*0.15 ? `<p class="note" style="margin-bottom:0">💡 ${fmt(unused)} coins ne sont pas alloués : le marché ne peut pas absorber plus sur ces items dans la durée de cycle choisie. Augmente le nombre d'items, la durée du cycle ou la part de marché pour les utiliser.</p>`:""}
+    </div>
+    <div class="tablewrap"><table style="min-width:800px">
+      <thead><tr><th>#</th><th>Item</th><th>Achat → Vente</th><th>Quantité</th><th>Investi</th><th>Durée</th><th>Profit /h</th><th>Risque</th></tr></thead>
+      <tbody>${picks.map((d,i)=>`<tr data-id="${esc(d.b.id)}"><td class="rank">${i+1}</td>
+        <td><div class="iname">${esc(d.b.name)}</div><div class="iid">${esc(d.b.id)}</div></td>
+        <td>${fmt(d.b.entry)} → ${fmt(d.b.exit)}</td>
+        <td>${d.units.toLocaleString("fr-FR")}</td><td>${fmt(d.invested)}</td><td>${fmtDur(d.tHours)}</td>
+        <td class="gold"><b>${fmt(d.pph)}</b></td><td>${riskHTML(d.risk)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="note">Chaque item est limité à ${(capShare*100).toFixed(0)} % de ton budget pour limiter la concentration.</p>`;
+}
+
+/* ============================== DÉTAIL ============================== */
+const PART_LABELS = {
+  manip:["Manipulation / prix suspect","Marge trop belle ou carnet déséquilibré"],
+  liq:["Liquidité","Temps pour acheter puis revendre"],
+  fragile:["Marge fragile","Marge nette trop faible face aux variations"],
+  volat:["Volatilité / tendance","Pression vendeuse et variation du prix"]
+};
+function openDetail(id){
+  const b = bases.find(x=>x.id===id); if(!b) return;
+  let d = derive(b, cfg.budget);
+  const dlg = $("#dlg");
+  if(!d || d.tooExpensive){
+    dlg.innerHTML = `<div class="dhead"><div style="flex:1"><b style="font-size:18px">${esc(b.name)}</b></div><button class="btn" data-close>✕</button></div>
+      <div class="dbody"><p>Cet item n'est pas rentable ou trop cher pour ton budget (1 unité ≈ ${fmt(b.entry)} coins).</p></div>`;
+    dlg.showModal(); return;
+  }
+  const r = d.risk, l = riskLevel(r.total);
+  const recv = d.units * b.exit * (1-cfg.tax);
+  const cushion = 1 - b.entry/(b.exit*(1-cfg.tax));
+  const dumpLoss = d.units * (b.bidTop*(1-cfg.tax) - b.entry);
+  const mph = b.mph ? `<div class="kpi"><b>${fmt(b.mph)}</b><span>« marge/h » brute affichée par skyblock.bz (théorique, 100 % du volume)</span></div>` : "";
+  const bookTbl = (rows, label) => `<div><table><thead><tr><th>${label}</th><th>Qté</th><th>Ordres</th></tr></thead><tbody>${
+    rows.map(x=>`<tr><td>${full(x.pricePerUnit)}</td><td>${x.amount.toLocaleString("fr-FR")}</td><td>${x.orders}</td></tr>`).join("")}</tbody></table></div>`;
+  dlg.innerHTML = `
+    <div class="dhead">
+      <div style="flex:1">
+        <div style="font-size:20px;font-weight:700">${esc(b.name)}</div>
+        <div class="mut" style="font-size:12px">${esc(b.id)}</div>
+      </div>
+      <div class="risk" style="min-width:0"><span class="rl c-${l.k}" style="font-size:14px">Risque ${l.label.toLowerCase()} · ${r.total}/100</span></div>
+      <button class="btn" data-close aria-label="Fermer">✕</button>
+    </div>
+    <div class="dbody">
+      <div class="hero-grid" style="margin:0">
+        <div class="kpi"><b class="gold">${fmt(d.pph)} /h</b><span>profit estimé /heure</span></div>
+        <div class="kpi"><b class="pos">${fmt(d.profit)}</b><span>profit par cycle</span></div>
+        <div class="kpi"><b>${fmtDur(d.tHours)}</b><span>durée estimée (${fmtDur(d.tBuy)} achat + ${fmtDur(d.tSell)} vente)</span></div>
+        <div class="kpi"><b>${(d.roi*100).toFixed(1)} %</b><span>marge nette</span></div>
+        ${mph}
+      </div>
+
+      <div>
+        <h3>Étapes à suivre en jeu</h3>
+        <ol class="steps">
+          <li>Ouvre le Bazaar (<code>/bz</code>) et cherche <button class="btn" data-copy="${esc(b.name)}" style="padding:1px 8px" title="Copier le nom">📋 ${esc(b.name)}</button></li>
+          <li><b>Create Buy Order</b> : quantité <code>${d.units.toLocaleString("fr-FR")}</code> à <code>${full(b.entry)}</code> coins/unité
+              → coût total <b>≈ ${full(d.invested)}</b> coins. <span class="mut">(le prix est +0,1 au-dessus du meilleur ordre d'achat actuel, ${full(b.bidTop)})</span></li>
+          <li>Attends que l'ordre se remplisse (≈ ${fmtDur(d.tBuy)}), puis récupère les items (<i>Claim</i>). Tu peux le remplir en plusieurs fois.</li>
+          <li><b>Create Sell Offer</b> : prix <code>${full(b.exit)}</code> coins/unité <span class="mut">(−0,1 sous la meilleure offre actuelle, ${full(b.askTop)})</span>.
+              Tu recevras <b>≈ ${full(recv)}</b> coins après taxe de ${(cfg.tax*100).toString().replace(".",",")} %.</li>
+          <li>Profit net attendu : <b class="pos">+${full(d.profit)}</b> coins. Vérifie de temps en temps que tes ordres sont toujours en tête, sinon ajuste de 0,1.</li>
+        </ol>
+        <div class="warn" style="margin-top:12px">Les prix ont quelques dizaines de secondes de retard : <b>vérifie le carnet en jeu</b> avant de valider.
+          Coussin de sécurité : le prix de revente peut baisser d'environ <b>${(cushion*100).toFixed(1)} %</b> avant que tu perdes de l'argent.
+          Si tu devais tout revendre immédiatement au meilleur ordre d'achat : <b class="${dumpLoss<0?"neg":"pos"}">${dumpLoss<0?"−":"+"}${fmt(Math.abs(dumpLoss))}</b> coins.</div>
+      </div>
+
+      <div>
+        <h3>Pourquoi ce niveau de risque ?</h3>
+        <div class="parts">${Object.keys(PART_LABELS).map(k=>{
+          const v = Math.round(r.parts[k]); const lv = riskLevel(v*0.9);
+          return `<div class="part" title="${PART_LABELS[k][1]}"><span>${PART_LABELS[k][0]}</span><div class="bar"><i class="b-${lv.k}" style="width:${Math.max(3,v)}%"></i></div><b class="c-${lv.k}">${v}</b></div>`;}).join("")}</div>
+        <ul class="reasons">${r.reasons.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+        ${r.hasHist?"":`<p class="note">Historique de prix insuffisant pour l'instant : garde la page ouverte quelques minutes pour affiner la volatilité.</p>`}
+      </div>
+
+      <div>
+        <h3>Carnet d'ordres (haut du carnet)</h3>
+        <div class="books">
+          ${bookTbl(b.asks,"Offres de vente (prix)")}
+          ${bookTbl(b.bids,"Ordres d'achat (prix)")}
+        </div>
+        <p class="note">Volume : ${fmt(b.is)} ventes instantanées /h · ${fmt(b.ib)} achats instantanés /h (moyenne 7 jours). Quantité limitée par le <b>${d.limitedBy}</b> (${d.units.toLocaleString("fr-FR")} sur ${d.cap.toLocaleString("fr-FR")} max. pour la durée de cycle).</p>
+      </div>
+    </div>`;
+  dlg.showModal();
+}
+
+/* ============================== EVENTS ============================== */
+function init(){
+  // chips
+  const chips = [["100k",1e5],["1M",1e6],["10M",1e7],["50M",5e7],["100M",1e8],["500M",5e8],["1B",1e9]];
+  $("#chips").innerHTML = chips.map(([l,v])=>`<button class="chip" data-v="${v}">${l}</button>`).join("");
+  $("#chips").addEventListener("click", e=>{
+    const c = e.target.closest(".chip"); if(!c) return;
+    cfg.budget = +c.dataset.v; $("#budget").value = c.textContent; persist(); render();
+  });
+  $("#budget").value = fmt(cfg.budget).replace("k","k");
+  $("#budget").addEventListener("input", e=>{
+    const v = parseMoney(e.target.value);
+    cfg.budget = isFinite(v) ? v : NaN;
+    if(isFinite(v)){ persist(); render(); } else { $("#budgetHint").textContent = "Montant invalide (ex : 5m, 250k, 1.2b)"; }
+  });
+  bindSel("#cycleH","cycleH"); bindSel("#share","share"); bindSel("#tax","tax"); bindSel("#minVol","minVol");
+  const mr = $("#maxRisk"); mr.value = cfg.maxRisk;
+  mr.addEventListener("input", ()=>{ cfg.maxRisk = +mr.value; persist(); render(); });
+  $("#q").value = cfg.q;
+  $("#q").addEventListener("input", e=>{ cfg.q = e.target.value; render(); });
+  $("#planN").value = cfg.planN;
+  $("#planN").addEventListener("change", e=>{ cfg.planN = +e.target.value; persist(); renderPlan(); });
+
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x===t));
+    document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on", p.id==="pane-"+t.dataset.tab));
+  }));
+  document.querySelector("thead").addEventListener("click", e=>{
+    const th = e.target.closest("th[data-sort]"); if(!th) return;
+    const k = th.dataset.sort;
+    if(cfg.sort===k) cfg.dir = -cfg.dir; else { cfg.sort=k; cfg.dir = (k==="name"||k==="entry"||k==="risk"||k==="tHours")?1:-1; }
+    persist(); render();
+  });
+  document.addEventListener("click", e=>{
+    const open = e.target.closest("[data-open]");
+    if(open){ openDetail(open.dataset.open); return; }
+    const tr = e.target.closest("tbody tr[data-id]");
+    if(tr && !e.target.closest("dialog")){ openDetail(tr.dataset.id); return; }
+    const cp = e.target.closest("[data-copy]");
+    if(cp){ try{ navigator.clipboard.writeText(cp.dataset.copy); const o=cp.textContent; cp.textContent="✔ copié"; setTimeout(()=>cp.textContent=o,1200);}catch(_){} return; }
+    if(e.target.closest("[data-close]") || e.target===$("#dlg")) $("#dlg").close();
+  });
+  $("#refresh").addEventListener("click", fetchAll);
+
+  fetchAll();
+  setInterval(fetchAll, POLL_MS);
+  setInterval(tickStatus, 1000);
+}
+function bindSel(sel, key){
+  const el = $(sel); el.value = String(cfg[key]);
+  if(el.value !== String(cfg[key])){ // valeur numérique non identique (ex: 0.0125)
+    for(const o of el.options) if(+o.value === +cfg[key]) el.value = o.value;
+  }
+  el.addEventListener("change", ()=>{ cfg[key] = +el.value; persist(); render(); });
+}
+function persist(){ if(cfg.budget > 0) saveJSON(SKEY, cfg); }
+init();
+</script>
+</body>
+</html>
