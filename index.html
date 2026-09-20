@@ -127,6 +127,19 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .hour td.best{outline:2px solid var(--gold);outline-offset:-2px;font-weight:700}
 .hour td.now,.hour th.now{text-decoration:underline}
 
+/* calendrier */
+.evstrip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:13px}
+.evchip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 11px;color:var(--text);text-decoration:none}
+.evchip:hover{border-color:var(--gold)}
+.evchip.live{border-color:var(--orange)}
+.evgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.evcard.live{border-color:var(--orange)}
+.evhead{display:flex;align-items:center;gap:12px}
+.evicon{font-size:28px}
+.evstatus{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;white-space:nowrap;color:var(--gold)}
+.evstatus.live{color:var(--orange);border-color:var(--orange)}
+.evline{margin:8px 0 12px}
+
 /* guide */
 .guide{display:grid;gap:14px;max-width:900px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
@@ -212,11 +225,13 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 <nav class="tabs" role="tablist">
   <button class="tab on" data-tab="flips">🏆 Meilleurs flips</button>
   <button class="tab" data-tab="plan">🧺 Plan de répartition</button>
+  <button class="tab" data-tab="calendar">📅 Calendrier &amp; events</button>
   <button class="tab" data-tab="guide">📖 Guide débutant</button>
 </nav>
 
 <!-- ===== FLIPS ===== -->
 <section class="pane on" id="pane-flips">
+  <div class="evstrip" id="evStrip"></div>
   <div id="hero"></div>
   <div class="legend">
     Risque :
@@ -261,6 +276,11 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     </div>
   </div>
   <div id="planOut"></div>
+</section>
+
+<!-- ===== CALENDRIER ===== -->
+<section class="pane" id="pane-calendar">
+  <div id="calOut"><p class="note">Chargement…</p></div>
 </section>
 
 <!-- ===== GUIDE ===== -->
@@ -327,6 +347,14 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <li><b>Volatilité / tendance</b> : déséquilibre entre ventes et achats instantanés (pression vendeuse = risque de baisse) et, pour les meilleurs candidats, l'historique des 7 derniers jours : écart entre le prix actuel et le prix « habituel », fourchette de variation, tendance à la baisse. Un prix très <i>sous</i> son niveau habituel n'est pas forcément une bonne affaire : c'est souvent un prix qui s'effondre.</li>
       </ul>
       <div class="warn">L'historique 7 jours est chargé en arrière-plan pour les ~15 meilleurs candidats (et à l'ouverture d'une fiche). Un item sans historique chargé n'est jugé que sur le déséquilibre ventes/achats et sur ce que la page a collecté depuis son ouverture.</div>
+    </div>
+
+    <div class="card">
+      <h3>Événements SkyBlock : comment ils influencent les prix</h3>
+      <p>SkyBlock a son propre calendrier (1 jour = 20 min réelles, 1 année = 124 h). Des événements comme le <b>Spooky Festival</b> (29-31 Automne, ≈ 1 h réelle tous les 5 jours) créent une demande ou une offre soudaine : les monstres lâchent des bonbons, les gens achètent ou vendent en masse.</p>
+      <p>Plutôt que de deviner, la page <b>mesure</b> l'effet sur l'historique réel : pour chaque occurrence passée, elle regarde le pic de prix le jour J, la veille et J+2 par rapport aux jours d'avant, et compare avec des « faux événements » (mêmes mesures à des dates sans événement). Un effet n'est affiché que s'il est net (≥ 4-6 %) <i>et</i> cohérent (≥ 65 % des occurrences vont dans le même sens).</p>
+      <div class="tip">Exemple mesuré sur ~50 occurrences : le <b>Green Candy</b> monte en pic d'environ <b>+17 %</b> (médiane) le jour du festival, contre +0,3 % un jour normal, puis revient à la normale en 2 jours. C'est un pic <i>bref</i> : vendre pendant l'événement est plus malin qu'acheter.</div>
+      <div class="warn">Limites : l'historique est quotidien (un événement d'1 h est lissé dans la journée), les pics réels sont donc souvent plus courts et plus forts que ce qui est affiché. Les événements longs (Hoppity's Hunt, Harvest Feast) et le Dark Auction / Jacob's Contest ne sont pas mesurés. Les perks du maire sont affichés à titre d'information.</div>
     </div>
 
     <div class="card">
@@ -557,7 +585,13 @@ function computeRisk(b, d){
     if(histS > 35) reasons.push(`Sur ${fmtDur(h.minutes/60)} d'historique, le prix a varié de ${(h.range*100).toFixed(1)} %${h.drop>0.02?` et a reculé de ${(h.drop*100).toFixed(1)} % depuis son pic`:""}.`);
   }
   // l'historique réel est le signal le plus fiable : il ne doit pas être dilué par le déséquilibre ventes/achats
-  const volat = histS == null ? imbS : Math.max(histS, 0.4*imbS + 0.6*histS);
+  let volat = histS == null ? imbS : Math.max(histS, 0.4*imbS + 0.6*histS);
+  // événement SkyBlock imminent / en cours dont l'effet sur CET item a été mesuré : les prix « habituels » ne valent plus
+  const evp = eventProximity(b.id);
+  if(evp){
+    volat = Math.max(volat, 70);
+    reasons.push(`${evp.ev.icon} ${evp.ev.name} ${evp.live?"en cours ou tout juste terminé":"imminent"} : sur cet item le prix bouge en général de ${signed(evp.r.spike.flag?evp.r.spike.med:evp.r.pre.med)} autour de l'événement. Les prix actuels sont anormaux, ne te fie pas au prix habituel.`);
+  }
   const parts = {manip, liq, fragile, volat};
   const weighted = .30*manip + .25*liq + .20*fragile + .25*volat;
   const worst = Math.max(manip, liq, fragile, volat);
@@ -578,7 +612,7 @@ async function getSeries(id, suffix){
   const r = await fetch(CF_URL+encodeURIComponent(id)+suffix);
   if(!r.ok) throw new Error("HTTP "+r.status);
   const raw = await r.json();
-  return raw.map(x=>({t:parseTs(x.timestamp), buy:x.buy, sell:x.sell})).filter(p=>p.buy>0 && p.sell>0).sort((a,b)=>a.t-b.t);
+  return raw.map(x=>({t:parseTs(x.timestamp), buy:x.buy, sell:x.sell, maxBuy:x.maxBuy, maxSell:x.maxSell})).filter(p=>p.buy>0 && p.sell>0).sort((a,b)=>a.t-b.t);
 }
 const isFresh = id => extCache[id] && Date.now()-extCache[id].t < EXT_TTL;
 async function loadWeek(id){
@@ -622,6 +656,253 @@ async function prefetchTop(rows){
   if(got) render();
 }
 
+/* ============================== CALENDRIER SKYBLOCK ============================== */
+// Temps SkyBlock : 1 jour = 20 min réelles, 31 jours/mois, 12 mois/an (= 124 h). Époque : 11 juin 2019 17:55 UTC.
+const SB_EPOCH = 1560275700000, SB_DAY = 1200000, SB_YEAR = 372*SB_DAY, DAY_MS = 86400e3;
+const SB_MONTHS = ["Début du Printemps","Printemps","Fin du Printemps","Début de l'Été","Été","Fin de l'Été","Début de l'Automne","Automne","Fin de l'Automne","Début de l'Hiver","Hiver","Fin de l'Hiver"];
+const sbTime = (y,m,d) => SB_EPOCH + (y-1)*SB_YEAR + (m*31 + d-1)*SB_DAY;
+function sbDate(t){
+  const ms = t-SB_EPOCH, year = Math.floor(ms/SB_YEAR)+1, doy = Math.floor((ms-(year-1)*SB_YEAR)/SB_DAY);
+  return {year, month:Math.floor(doy/31), day:doy%31+1};
+}
+// starts = [mois (0-11), jour] ; days = durée en jours SkyBlock ; seed = items à suivre en priorité ; ctrl = décalage des dates témoins
+const EVENTS = [
+  {key:"spooky",  icon:"🎃", name:"Spooky Festival",       starts:[[7,29]],         days:3,  seed:["GREEN_CANDY","PURPLE_CANDY"], ctrl:SB_YEAR/2,
+   desc:"Les monstres ont une chance de lâcher des bonbons verts/violets, à échanger auprès du Fear Mongerer pour des récompenses."},
+  {key:"jerry",   icon:"🎄", name:"Season of Jerry",       starts:[[11,24]],        days:3,  seed:["GREEN_GIFT","RED_GIFT","WHITE_GIFT"], ctrl:SB_YEAR/2,
+   desc:"Défends l'atelier de Jerry pour gagner des cadeaux."},
+  {key:"newyear", icon:"🎂", name:"New Year Celebration",  starts:[[11,29]],        days:3,  seed:[], ctrl:SB_YEAR/2,
+   desc:"Le Baker offre des gâteaux gratuits."},
+  {key:"zoo",     icon:"🦁", name:"Traveling Zoo",         starts:[[3,1],[9,1]],    days:3,  seed:[], ctrl:SB_YEAR/4,
+   desc:"Oringo le zoologue itinérant vient échanger des pets (2 passages par année SkyBlock)."},
+  {key:"election",icon:"🗳️", name:"Ouverture des élections",starts:[[2,27],[5,27]],days:1,  seed:[], ctrl:SB_YEAR/4,
+   desc:"Le vote pour le prochain maire s'ouvre (les perks du maire peuvent faire bouger certains prix)."},
+  {key:"hoppity", icon:"🐰", name:"Hoppity's Hunt",        starts:[[0,1]],          days:93, seed:[], long:true,
+   desc:"Chasse aux lapins en chocolat pendant tout le printemps SkyBlock."},
+  {key:"harvest", icon:"🌾", name:"Harvest Feast",         starts:[[6,1]],          days:93, seed:[], long:true,
+   desc:"Les cultures de saison donnent des ingrédients spéciaux pendant tout l'automne SkyBlock."}
+];
+function evStarts(ev, from, to){
+  const y0 = Math.floor((from-SB_EPOCH)/SB_YEAR)+1, y1 = Math.floor((to-SB_EPOCH)/SB_YEAR)+1, out = [];
+  for(let y=y0-1; y<=y1+1; y++) for(const [m,d] of ev.starts){ const s = sbTime(y,m,d); if(s>=from && s<=to) out.push(s); }
+  return out.sort((a,b)=>a-b);
+}
+function evNext(ev, now){
+  const dur = ev.days*SB_DAY, list = evStarts(ev, now-dur-SB_YEAR, now+2*SB_YEAR);
+  const cur = list.find(s=>now>=s && now<s+dur);
+  if(cur) return {start:cur, end:cur+dur, live:true};
+  const nxt = list.find(s=>s>now);
+  return {start:nxt, end:nxt+dur, live:false};
+}
+function fmtCountdown(ms){
+  const m = Math.max(0, Math.round(ms/60000));
+  if(m >= 1440) return `${Math.floor(m/1440)} j ${Math.floor(m%1440/60)} h`;
+  if(m >= 60) return `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")} min`;
+  return `${Math.max(1,m)} min`;
+}
+const fmtLocal = t => new Date(t).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+
+/* --- mesure de l'effet réel d'un événement sur le prix d'un item (historique quotidien Coflnet) --- */
+// Pour chaque occurrence passée : pic de prix le jour J, prix la veille, prix à J+2, comparés au prix des jours J-4..J-2.
+// Le tout est comparé à des dates « témoins » (mêmes mesures, décalées d'un demi-cycle) pour ne pas confondre avec le bruit habituel.
+function eventEffect(daily, ev){
+  if(ev.long || !daily || daily.length < 60) return null;
+  const find = t => {
+    let lo = 0, hi = daily.length-1;
+    while(lo <= hi){ const m = (lo+hi)>>1, p = daily[m]; if(t < p.t) hi = m-1; else if(t >= p.t+DAY_MS) lo = m+1; else return p; }
+    return null;
+  };
+  const measure = t => {
+    const e = find(t), dm1 = find(t-DAY_MS), d2 = find(t+2*DAY_MS);
+    const base = [-4,-3,-2].map(k=>find(t+k*DAY_MS)).filter(Boolean);
+    if(!e || !dm1 || !d2 || base.length < 2 || !(e.maxSell > 0)) return null;
+    const b = median(base.map(p=>p.sell));
+    if(!(b > 0)) return null;
+    return {spike:e.maxSell/b-1, pre:dm1.sell/b-1, after:d2.sell/b-1};
+  };
+  const last = daily[daily.length-1].t;
+  const starts = evStarts(ev, daily[0].t + 5*DAY_MS, Math.min(Date.now(), last)).slice(-60);
+  const E = [], C = [];
+  for(const s of starts){ const m = measure(s); if(m) E.push(m); const c = measure(s + ev.ctrl); if(c) C.push(c); }
+  if(E.length < 12 || C.length < 12) return null;
+  const res = {n:E.length};
+  for(const [k, minDiff] of [["spike",0.06],["pre",0.04],["after",0.04]]){
+    const e = E.map(x=>x[k]), c = C.map(x=>x[k]);
+    const mE = median(e), mC = median(c), diff = mE-mC, sg = Math.sign(diff);
+    const cons = e.filter(v=>(v-mC)*sg > 0).length / e.length;   // part des occurrences qui vont dans le même sens
+    res[k] = {med:mE, ctrl:mC, diff, cons, flag: Math.abs(diff) >= minDiff && cons >= 0.65};
+  }
+  return res;
+}
+function getEffects(id){
+  const c = extCache[id];
+  if(!c || !c.daily) return null;
+  if(!c.evfx){ c.evfx = {}; for(const ev of EVENTS) if(!ev.long) c.evfx[ev.key] = eventEffect(c.daily, ev); }
+  return c.evfx;
+}
+// événement (avec effet mesuré) qui est imminent, en cours ou vient de se terminer pour cet item
+function eventProximity(id){
+  const fx = getEffects(id); if(!fx) return null;
+  const now = Date.now();
+  for(const ev of EVENTS){
+    const r = fx[ev.key]; if(!r || !(r.spike.flag || r.pre.flag)) continue;
+    const n = evNext(ev, now);
+    if(now >= n.start - 12*3600e3 && now <= n.end + 3*3600e3) return {ev, r, live:n.live, start:n.start};
+    const prev = evStarts(ev, now-SB_YEAR*2, now).pop();
+    if(prev && now >= prev && now <= prev + ev.days*SB_DAY + 3*3600e3) return {ev, r, live:true, start:prev};
+  }
+  return null;
+}
+function effectLines(ev, r){
+  const L = [];
+  const dirWord = v => v>0 ? "monte" : "baisse";
+  if(r.spike.flag) L.push(`Le jour de l'événement, le prix ${dirWord(r.spike.diff)} en pic de <b>${signed(r.spike.med)}</b> (médiane) par rapport aux 3 jours d'avant, contre ${signed(r.spike.ctrl)} un jour normal.`);
+  if(r.pre.flag)   L.push(`La veille, il ${dirWord(r.pre.diff)} déjà de ${signed(r.pre.med)} (contre ${signed(r.pre.ctrl)} habituellement).`);
+  if(r.after.flag) L.push(`Deux jours après, il reste ${signed(r.after.med)} par rapport à avant l'événement : l'effet dure.`);
+  else if(r.spike.flag) L.push(`Deux jours après, le prix est revenu à la normale (${signed(r.after.med)}) : c'est un <b>pic bref</b>.`);
+  return L;
+}
+function effectAdvice(r){
+  if(r.spike.flag && r.spike.diff > 0) return `💡 Le prix grimpe brièvement pendant l'événement : place plutôt une offre de vente avant / pendant l'événement, et évite d'acheter au moment du pic.`;
+  if(r.spike.flag && r.spike.diff < 0) return `💡 Le prix chute pendant l'événement (offre abondante) : attends la fin pour acheter moins cher.`;
+  if(r.pre.flag && r.pre.diff > 0) return `💡 Le prix commence à monter la veille : acheter avant peut être avantageux.`;
+  return "";
+}
+
+/* --- chargement des items « à surveiller » d'un événement --- */
+const seedLoading = new Set();
+async function ensureSeeds(all){
+  const now = Date.now(), ids = new Set();
+  for(const ev of EVENTS){
+    if(ev.long || !ev.seed.length) continue;
+    const n = evNext(ev, now);
+    if(all || n.live || n.start-now < 24*3600e3) ev.seed.forEach(i=>ids.add(i));
+  }
+  const todo = [...ids].filter(id=>{
+    const c = extCache[id];
+    return !(c && c.daily) && !seedLoading.has(id) && !(c && c.dailyErr && now-c.dailyErr < 600e3);
+  });
+  if(!todo.length) return;
+  todo.forEach(id=>seedLoading.add(id));
+  await Promise.all(todo.map(async id=>{
+    try{ await loadDaily(id); }
+    catch(e){ extCache[id] = Object.assign(extCache[id]||{t:Date.now()}, {dailyErr:Date.now()}); }
+    finally{ seedLoading.delete(id); }
+  }));
+  renderCalendar();
+  render();
+}
+function itemLabel(id){ const b = bases.find(x=>x.id===id); return b ? b.name : prettify(id); }
+function evBadge(b){
+  const now = Date.now(); let out = "";
+  for(const ev of EVENTS){
+    if(ev.long) continue;
+    const fx = extCache[b.id] && extCache[b.id].evfx && extCache[b.id].evfx[ev.key];
+    if(!(ev.seed.includes(b.id) || (fx && (fx.spike.flag || fx.pre.flag)))) continue;
+    const n = evNext(ev, now), dt = n.start-now;
+    if(n.live) out += ` · <span class="c-o" title="${esc(ev.name)} en cours">${ev.icon} en cours</span>`;
+    else if(dt < 24*3600e3) out += ` · <span class="c-y" title="${esc(ev.name)}">${ev.icon} dans ${fmtCountdown(dt)}</span>`;
+  }
+  return out;
+}
+
+/* --- affichage --- */
+let mayorInfo = null;
+const stripCodes = s => String(s||"").replace(/§./g,"");
+async function loadMayor(){
+  try{
+    const r = await fetch("https://api.hypixel.net/v2/resources/skyblock/election", {cache:"no-store"});
+    if(r.ok){ const j = await r.json(); if(j.success) mayorInfo = j; }
+  }catch(e){}
+  renderCalendar();
+}
+function renderStrip(){
+  const el = $("#evStrip"); if(!el) return;
+  const now = Date.now();
+  const list = EVENTS.filter(e=>!e.long).map(ev=>({ev, ...evNext(ev, now)})).sort((a,b)=>(b.live-a.live)||(a.start-b.start)).slice(0,3);
+  el.innerHTML = `<span class="mut">📅 Événements :</span> ` + list.map(x=>
+    `<a href="#" data-gocal="1" class="evchip ${x.live?"live":""}">${x.ev.icon} ${esc(x.ev.name)} <b class="cd" data-t="${x.live?x.end:x.start}" data-live="${x.live?1:0}">${x.live?"en cours":"dans "+fmtCountdown(x.start-now)}</b></a>`).join("");
+}
+function tickEvents(){
+  const now = Date.now();
+  document.querySelectorAll(".cd").forEach(el=>{
+    const t = +el.dataset.t, live = el.dataset.live==="1";
+    el.textContent = live ? `en cours · fin dans ${fmtCountdown(t-now)}` : `dans ${fmtCountdown(t-now)}`;
+  });
+}
+function renderCalendar(){
+  const el = $("#calOut"); if(!el) return;
+  const now = Date.now(), sd = sbDate(now);
+  const list = EVENTS.map(ev=>({ev, ...evNext(ev, now)})).sort((a,b)=>(b.live-a.live)||(a.start-b.start));
+
+  let mayor = `<p class="note">Chargement des maires…</p>`;
+  if(mayorInfo && mayorInfo.mayor){
+    const m = mayorInfo.mayor, mi = m.minister;
+    const perks = (m.perks||[]).map(p=>`<li><b>${esc(p.name)}</b> — ${esc(stripCodes(p.description))}</li>`).join("");
+    const cur = mayorInfo.current;
+    mayor = `<div><b style="font-size:16px">${esc(m.name)}</b> <span class="mut">(maire en poste)</span></div><ul class="reasons">${perks}</ul>
+      ${mi ? `<div><b>${esc(mi.name)}</b> <span class="mut">(ministre)</span> — ${esc(mi.perk?mi.perk.name+" : "+stripCodes(mi.perk.description):"")}</div>`:""}
+      ${cur && cur.candidates ? `<div class="warn" style="margin-top:10px"><b>Élection en cours</b> — candidats : ${cur.candidates.map(c=>esc(c.name)+(c.votes!=null?" ("+Number(c.votes).toLocaleString("fr-FR")+" votes)":"")).join(", ")}</div>`:""}`;
+  }
+
+  const cards = list.map(({ev,start,end,live})=>{
+    const long = ev.long;
+    const seeds = ev.seed.map(id=>{
+      const c = extCache[id], fx = getEffects(id), r = fx && fx[ev.key];
+      const inB = bases.some(b=>b.id===id);
+      const name = inB ? `<a href="#" data-open="${esc(id)}">${esc(itemLabel(id))}</a>` : esc(itemLabel(id));
+      let txt;
+      if(r && r.spike.flag) txt = `${signed(r.spike.med)} en pic le jour J <span class="mut">(normal : ${signed(r.spike.ctrl)} · ${r.n} occurrences)</span>`;
+      else if(r) txt = `<span class="mut">pas d'effet mesurable (${r.n} occurrences)</span>`;
+      else if(c && c.dailyErr) txt = `<span class="mut">historique indisponible</span>`;
+      else txt = `<span class="mut">mesure en cours…</span>`;
+      return `<li>${name} : ${txt}</li>`;
+    }).join("");
+    const realDur = fmtDur(ev.days*SB_DAY/3600e3);
+    return `<div class="card evcard ${live?"live":""}">
+      <div class="evhead"><span class="evicon">${ev.icon}</span>
+        <div style="flex:1"><h3 style="margin:0">${esc(ev.name)}</h3>
+          <div class="mut" style="font-size:12.5px">${ev.starts.map(([m,d])=>`${d} ${SB_MONTHS[m]}`).join(" & ")} · ${ev.days>=93?"toute la saison":ev.days+" j SkyBlock"} ≈ ${realDur} réelle${long?"s":""}</div></div>
+        <span class="evstatus ${live?"live":""}"><span class="cd" data-t="${live?end:start}" data-live="${live?1:0}">${live?"en cours":"dans "+fmtCountdown(start-now)}</span></span>
+      </div>
+      <p style="margin:6px 0">${esc(ev.desc)}</p>
+      <div class="mut" style="font-size:12.5px">${live?"Depuis":"Prochaine occurrence :"} <b>${fmtLocal(start)}</b> → ${fmtLocal(end)} <span class="mut">(heure locale)</span></div>
+      ${seeds ? `<div style="margin-top:8px"><div class="mut" style="font-size:12px">Items à surveiller (effet mesuré sur l'historique réel) :</div><ul class="reasons" style="margin-top:4px">${seeds}</ul></div>`:""}
+      ${long ? `<div class="note" style="margin:6px 0 0">Événement de longue durée : pas de mesure automatique, mais l'offre et la demande de certains items peuvent changer pendant toute la période.</div>`:""}
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="hero" style="margin-bottom:14px">
+      <h2>🕒 Maintenant dans SkyBlock</h2>
+      <div class="name">${sd.day} ${SB_MONTHS[sd.month]}, année ${sd.year}</div>
+      <div class="mut" style="margin-top:4px;font-size:13px">1 jour SkyBlock = 20 min réelles · 1 année = 124 h (≈ 5,2 jours)</div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><h3>🏛️ Maire &amp; ministre</h3>${mayor}</div>
+    <div class="evgrid">${cards}</div>
+    <p class="note">Les dates sont calculées à partir du calendrier SkyBlock (déterministe) et affichées dans ton fuseau horaire. Les effets sur les prix sont <b>mesurés</b> sur l'historique réel (comparaison avec des dates témoins), pas supposés.</p>`;
+  tickEvents();
+}
+function eventsHTML(b){
+  const fx = getEffects(b.id);
+  if(!fx) return "";
+  const now = Date.now(), blocks = [];
+  let tested = 0, nmax = 0;
+  for(const ev of EVENTS){
+    const r = fx[ev.key]; if(!r) continue;
+    tested++; nmax = Math.max(nmax, r.n);
+    if(!(r.spike.flag || r.pre.flag || r.after.flag)) continue;
+    const n = evNext(ev, now);
+    blocks.push(`<div class="evline"><b>${ev.icon} ${esc(ev.name)}</b> — <span class="${n.live?"c-o":"mut"}">${n.live?"en cours":"prochain : dans "+fmtCountdown(n.start-now)+" ("+fmtLocal(n.start)+")"}</span>
+      <ul class="reasons">${effectLines(ev,r).map(x=>`<li>${x}</li>`).join("")}</ul>
+      ${effectAdvice(r) ? `<div class="tip" style="margin:4px 0">${effectAdvice(r)}</div>`:""}
+      <div class="mut" style="font-size:12px">Mesuré sur ${r.n} occurrences.</div></div>`);
+  }
+  if(!tested) return `<h3 style="margin-top:16px">Événements SkyBlock</h3><p class="note">Historique trop court pour mesurer l'effet des événements sur cet item.</p>`;
+  return `<h3 style="margin-top:16px">Événements SkyBlock &amp; prix</h3>` + (blocks.length ? blocks.join("") :
+    `<p class="note">Aucun événement récurrent (Spooky Festival, Season of Jerry, Traveling Zoo…) n'a d'effet mesurable sur le prix de cet item (${tested} événements testés, jusqu'à ${nmax} occurrences chacun).</p>`);
+}
+
 /* ============================== FETCH ============================== */
 async function fetchAll(){
   setStatus("loading");
@@ -653,6 +934,7 @@ function setStatus(state, msg){
   if(state==="err") t.textContent = "Erreur : "+(msg||"réseau")+" — nouvel essai auto";
 }
 function tickStatus(){
+  tickEvents();
   if(!lastFetchOk) return;
   const age = Math.round((Date.now()-lastUpdated)/1000);
   $("#statusTxt").textContent = `Prix Hypixel il y a ${age<90?age+" s":Math.round(age/60)+" min"} · ${bases.length} items`;
@@ -710,7 +992,10 @@ function render(){
   $("#histInfo").textContent = maxMin>=10 ? `Historique : ${tracked} items suivis sur ${fmtDur(maxMin/60)}` : `Historique en cours de collecte (${tracked} items suivis)`;
   renderPlan();
   tickStatus();
+  renderStrip();
+  renderCalendar();
   prefetchTop(rows);
+  ensureSeeds(false);
 }
 
 function riskHTML(r){
@@ -729,7 +1014,7 @@ function rowHTML(d,i){
   const b = d.b;
   return `<tr data-id="${esc(b.id)}">
     <td class="rank">${i+1}</td>
-    <td><div class="iname">${esc(b.name)}</div><div class="iid">${esc(b.id)}${vsUsual(b)}</div></td>
+    <td><div class="iname">${esc(b.name)}</div><div class="iid">${esc(b.id)}${vsUsual(b)}${evBadge(b)}</div></td>
     <td title="${full(b.entry)} → ${full(b.exit)}">${fmt(b.entry)} → ${fmt(b.exit)}</td>
     <td class="pos" title="+${full(d.net)} coins/unité après taxe">+${(d.roi*100).toFixed(1)} %</td>
     <td class="mut" title="Ventes instantanées /h (remplit ton achat) · Achats instantanés /h (remplit ta vente)">${fmt(b.is)} · ${fmt(b.ib)}</td>
@@ -825,7 +1110,7 @@ async function renderHistory(b){
       const st = dlg.scrollTop; openDetail(id); dlg.scrollTop = st; render(); return;
     }
     if(week.length < 12){ box.innerHTML = `<p class="note">Historique trop court pour cet item.</p>`; return; }
-    box.innerHTML = historyHTML(b, week, daily);
+    box.innerHTML = historyHTML(b, week, daily) + eventsHTML(b);
     attachChart(box, week);
   }catch(e){
     console.error(e);
@@ -1036,10 +1321,13 @@ function init(){
   $("#planN").value = cfg.planN;
   $("#planN").addEventListener("change", e=>{ cfg.planN = +e.target.value; persist(); renderPlan(); });
 
-  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x===t));
-    document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on", p.id==="pane-"+t.dataset.tab));
-  }));
+  const showTab = name => {
+    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x.dataset.tab===name));
+    document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on", p.id==="pane-"+name));
+    if(name === "calendar"){ renderCalendar(); ensureSeeds(true); }
+  };
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showTab(t.dataset.tab)));
+  renderStrip(); renderCalendar(); loadMayor();
   document.querySelector("thead").addEventListener("click", e=>{
     const th = e.target.closest("th[data-sort]"); if(!th) return;
     const k = th.dataset.sort;
@@ -1047,8 +1335,9 @@ function init(){
     persist(); render();
   });
   document.addEventListener("click", e=>{
+    if(e.target.closest("[data-gocal]")){ e.preventDefault(); showTab("calendar"); return; }
     const open = e.target.closest("[data-open]");
-    if(open){ openDetail(open.dataset.open); return; }
+    if(open){ e.preventDefault(); openDetail(open.dataset.open); return; }
     const tr = e.target.closest("tbody tr[data-id]");
     if(tr && !e.target.closest("dialog")){ openDetail(tr.dataset.id); return; }
     const cp = e.target.closest("[data-copy]");
