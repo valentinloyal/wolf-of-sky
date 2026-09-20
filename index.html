@@ -406,6 +406,16 @@ function parseMoney(str){
 function prettify(id){
   return id.replace(/^ENCHANTMENT_/,"").replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 }
+const ROMAN = ["","I","II","III","IV","V","VI","VII","VIII","IX","X"];
+// Dans le jeu, les livres d'enchantement s'appellent « Sunset I » (chiffres romains), pas « Ultimate Sunset 1 ».
+// Le Bazaar filtre par mot : on cherche donc le nom de base (« Sunset ») puis on choisit le niveau.
+function gameNames(id, fallback){
+  const m = id.match(/^ENCHANTMENT_(?:ULTIMATE_)?(.+)_(\d+)$/);
+  if(!m) return {name:fallback, search:fallback, book:false};
+  const base = m[1].replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+  const lvl = +m[2];
+  return {name:`${base} ${ROMAN[lvl]||lvl}`, search:base, book:true, ultimate:id.includes("ENCHANTMENT_ULTIMATE_")};
+}
 function riskLevel(r){
   if(r<25) return {k:"g", label:"Faible"};
   if(r<45) return {k:"y", label:"Modéré"};
@@ -458,8 +468,9 @@ function buildBases(products){
     if(!(is > 0) || !(ib > 0)) continue;
     const o1 = q.sellPrice > 0 ? Math.abs(bidTop - q.sellPrice)/q.sellPrice : 0;
     const o2 = q.buyPrice  > 0 ? Math.abs(askTop - q.buyPrice)/q.buyPrice   : 0;
+    const g = gameNames(id, (bzMap[id] && bzMap[id].name) || prettify(id));
     out.push({
-      id, name: (bzMap[id] && bzMap[id].name) || prettify(id),
+      id, name: g.name, search: g.search, book: g.book, ultimate: g.ultimate,
       bidTop, askTop, entry, exit, is, ib,
       grossPct: exit/entry - 1,
       outlier: Math.max(o1,o2),
@@ -744,7 +755,8 @@ function openDetail(id){
       <div>
         <h3>Étapes à suivre en jeu</h3>
         <ol class="steps">
-          <li>Ouvre le Bazaar (<code>/bz</code>) et cherche <button class="btn" data-copy="${esc(b.name)}" style="padding:1px 8px" title="Copier le nom">📋 ${esc(b.name)}</button></li>
+          <li>Ouvre le Bazaar (<code>/bz</code>), clique sur la recherche (loupe) et tape <button class="btn" data-copy="${esc(b.search)}" style="padding:1px 8px" title="Copier le terme de recherche">📋 ${esc(b.search)}</button>
+              ${b.book ? `<div class="mut" style="font-size:12.5px;margin-top:4px">C'est un <b>livre d'enchantement${b.ultimate?" ultime":""}</b> : il apparaît dans le Bazaar sous le nom <b>« ${esc(b.name)} »</b> (chiffres romains, pas « ${esc(b.id.replace(/^ENCHANTMENT_/,"").replace(/_/g," ").toLowerCase())} »). Cherche seulement « ${esc(b.search)} », puis choisis le bon niveau dans la liste. Si rien n'apparaît, regarde dans la catégorie des enchantements.</div>` : `<div class="mut" style="font-size:12.5px;margin-top:4px">Si le nom exact ne donne rien, cherche un seul mot de ce nom.</div>`}</li>
           <li><b>Create Buy Order</b> : quantité <code>${d.units.toLocaleString("fr-FR")}</code> à <code>${full(b.entry)}</code> coins/unité
               → coût total <b>≈ ${full(d.invested)}</b> coins. <span class="mut">(le prix est +0,1 au-dessus du meilleur ordre d'achat actuel, ${full(b.bidTop)})</span></li>
           <li>Attends que l'ordre se remplisse (≈ ${fmtDur(d.tBuy)}), puis récupère les items (<i>Claim</i>). Tu peux le remplir en plusieurs fois.</li>
