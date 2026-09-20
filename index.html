@@ -131,6 +131,13 @@ input::placeholder{color:var(--t3)}
 .chip:hover{color:var(--t1);border-color:var(--t3)}
 .chip.on{color:var(--ice);border-color:var(--ice)}
 input[type=range]{width:100%;accent-color:var(--ice);height:28px;margin:0}
+.prof-f{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:4px 12px}
+.prof-f label{grid-column:1/-1}
+.seg{display:inline-flex;height:28px;border:1px solid var(--ln2);border-radius:var(--r);overflow:hidden}
+.seg button{background:none;border:0;border-right:1px solid var(--ln2);padding:0 14px;color:var(--t2);font:500 12.5px var(--fs);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button:hover{color:var(--t1);background:var(--s2)}
+.seg button.on{color:var(--ice);background:var(--ice-bg);box-shadow:inset 0 -2px 0 var(--ice)}
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 
 /* ---------- bande marché & meilleur choix ---------- */
@@ -386,6 +393,13 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
     <div class="chips" id="chips"></div>
   </div>
   <div class="tk-grid">
+    <div class="field prof-f">
+      <label id="profLbl">Profil</label>
+      <div class="seg" id="profSeg" role="group" aria-labelledby="profLbl">
+        <button type="button" data-prof="prudent">Prudent</button><button type="button" data-prof="equilibre">Équilibré</button><button type="button" data-prof="agressif">Agressif</button>
+      </div>
+      <span class="hint" id="profHint"></span>
+    </div>
     <div class="field">
       <label for="maxRisk">Risque max <b id="maxRiskV"></b></label>
       <input id="maxRisk" type="range" min="10" max="100" step="5">
@@ -588,6 +602,21 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
     </div>
 
     <div class="card">
+      <h3>Profils de risque</h3>
+      <p>Les trois boutons <b>Prudent / Équilibré / Agressif</b> du ticket règlent d'un coup ce qui dépend de <b>ta tolérance au risque</b>. Si tu modifies un réglage à la main, le profil passe en « personnalisé ».</p>
+      <div style="overflow-x:auto"><table class="gtable">
+        <thead><tr><th>Profil</th><th>Risque max</th><th>Cycle</th><th>Volume min.</th><th>Items (répartition)</th></tr></thead>
+        <tbody>
+          <tr><td><b>Prudent</b></td><td>30</td><td>30 min</td><td>150 /h</td><td>5</td></tr>
+          <tr><td><b>Équilibré</b></td><td>50</td><td>1 h</td><td>20 /h</td><td>4</td></tr>
+          <tr><td><b>Agressif</b></td><td>75</td><td>2 h</td><td>5 /h</td><td>3</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tip">Un profil ne change <b>pas</b> la « part de marché captée » ni la taxe : ce sont des hypothèses sur le marché, pas des préférences. Sinon « Agressif » afficherait des profits gonflés sans que la réalité change.</div>
+      <p>Pour débuter : reste en <b>Prudent</b> ou <b>Équilibré</b>, avec un petit capital, le temps de comprendre le rythme.</p>
+    </div>
+
+    <div class="card">
       <h3>Flips PNJ (onglet « Flips PNJ »)</h3>
       <p>Un PNJ rachète certains items à <b>prix fixe et sans taxe</b>. Si ce prix dépasse ce que l'item coûte au Bazaar, tu peux acheter au Bazaar puis revendre au PNJ. Contrairement à un flip normal, <b>il n'y a pas de vente à attendre</b> : le seul aléa est le remplissage de ton ordre d'achat.</p>
       <ul>
@@ -688,17 +717,18 @@ if(!(cfg.budget > 0)) cfg.budget = 5_000_000;
 (function applyHash(){
   try{
     const h = new URLSearchParams(location.hash.slice(1)), num = k => { const v = parseFloat(h.get(k)); return isFinite(v) ? v : null; };
-    const b = num("b"), r = num("r"), c = num("c"), sh = num("s"), t = num("t"), v = num("v");
+    const b = num("b"), r = num("r"), c = num("c"), sh = num("s"), t = num("t"), v = num("v"), n = num("n");
     if(b > 0) cfg.budget = b;
     if(r >= 10 && r <= 100) cfg.maxRisk = r;
     if([0.5,1,2,4].includes(c)) cfg.cycleH = c;
     if([0.1,0.2,0.35,0.5].includes(sh)) cfg.share = sh;
     if([0.0125,0.01125,0.01].includes(t)) cfg.tax = t;
     if(v > 0 && v <= 1e5) cfg.minVol = v;
+    if(Number.isInteger(n) && n >= 2 && n <= 6) cfg.planN = n;
   }catch(e){}
 })();
 function shareURL(){
-  const p = new URLSearchParams({b:Math.round(cfg.budget), r:cfg.maxRisk, c:cfg.cycleH, s:cfg.share, t:cfg.tax, v:cfg.minVol});
+  const p = new URLSearchParams({b:Math.round(cfg.budget), r:cfg.maxRisk, c:cfg.cycleH, s:cfg.share, t:cfg.tax, v:cfg.minVol, n:cfg.planN});
   return location.href.split("#")[0] + "#" + p.toString();
 }
 let bases = [];          // produits analysés (indépendants du budget)
@@ -1379,6 +1409,7 @@ function candidates(budget, opts={}){
 }
 
 function render(){
+  renderProfile();
   // header budget hint
   $("#budgetHint").textContent = isFinite(cfg.budget) && cfg.budget>0 ? "= "+Math.round(cfg.budget).toLocaleString("fr-FR")+" coins" : "Montant invalide";
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on", +c.dataset.v===cfg.budget));
@@ -2325,6 +2356,37 @@ function openBackup(){
   if(!dlg.open) dlg.showModal();
 }
 
+/* ============================== PROFILS DE RISQUE ============================== */
+// Un profil règle ce qui relève de TA tolérance au risque : risque max, durée d'immobilisation, liquidité exigée, diversification.
+// Il ne touche PAS aux hypothèses du modèle (part de marché captée, taxe) : sinon « agressif » gonflerait artificiellement les profits affichés.
+const PROFILES = {
+  prudent:   {label:"Prudent",   maxRisk:30, cycleH:0.5, minVol:150, planN:5, hint:"risque ≤ 30 · cycle 30 min · ≥ 150 /h",
+              desc:"Risque ≤ 30, cycles de 30 min, items très liquides (≥ 150 échanges/h), 5 items en répartition. Moins de gains affichés, moins de mauvaises surprises."},
+  equilibre: {label:"Équilibré", maxRisk:50, cycleH:1,   minVol:20,  planN:4, hint:"risque ≤ 50 · cycle 1 h · ≥ 20 /h",
+              desc:"Risque ≤ 50, cycles d'1 h, volume ≥ 20 /h, 4 items en répartition. Le réglage par défaut."},
+  agressif:  {label:"Agressif",  maxRisk:75, cycleH:2,   minVol:5,   planN:3, hint:"risque ≤ 75 · cycle 2 h · ≥ 5 /h",
+              desc:"Risque ≤ 75, cycles de 2 h, marchés plus étroits (≥ 5 échanges/h), 3 items en répartition. Plus de gains possibles, mais aussi plus de flips piégeux : à réserver à un petit capital."}
+};
+const PROFILE_KEYS = ["maxRisk", "cycleH", "minVol", "planN"];
+function currentProfile(){
+  for(const k in PROFILES) if(PROFILE_KEYS.every(f => PROFILES[k][f] === cfg[f])) return k;
+  return null;
+}
+function renderProfile(){    // le profil est déduit des réglages : il reste juste après un import, un lien ou un changement manuel
+  const cur = currentProfile();
+  document.querySelectorAll("#profSeg button").forEach(b => {
+    b.classList.toggle("on", b.dataset.prof === cur);
+    b.setAttribute("aria-pressed", b.dataset.prof === cur ? "true" : "false");
+    b.title = PROFILES[b.dataset.prof].desc;
+  });
+  $("#profHint").textContent = cur ? PROFILES[cur].hint : "personnalisé : tes réglages ne correspondent à aucun profil";
+}
+function applyProfile(key){
+  const p = PROFILES[key]; if(!p) return;
+  for(const f of PROFILE_KEYS) cfg[f] = p[f];
+  persist(); syncControls(); render();
+}
+
 /* ============================== EVENTS ============================== */
 function init(){
   // chips
@@ -2346,7 +2408,7 @@ function init(){
   $("#q").value = cfg.q;
   $("#q").addEventListener("input", e=>{ cfg.q = e.target.value; render(); });
   $("#planN").value = cfg.planN;
-  $("#planN").addEventListener("change", e=>{ cfg.planN = +e.target.value; persist(); renderPlan(); });
+  $("#planN").addEventListener("change", e=>{ cfg.planN = +e.target.value; persist(); renderPlan(); renderProfile(); });
 
   const showTab = name => {
     document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x.dataset.tab===name));
@@ -2396,6 +2458,8 @@ function init(){
   $("#refresh").addEventListener("click", fetchAll);
   $("#favq").addEventListener("input", renderFavSearch);
   $("#backupBtn").addEventListener("click", openBackup);
+  $("#profSeg").addEventListener("click", e => { const b = e.target.closest("[data-prof]"); if(b) applyProfile(b.dataset.prof); });
+  renderProfile();
   $("#npcMin").value = String(cfg.npcMin);
   $("#npcMin").addEventListener("change", e => { cfg.npcMin = +e.target.value; persist(); renderNpc(); });
   $("#shareLink").addEventListener("click", async ()=>{

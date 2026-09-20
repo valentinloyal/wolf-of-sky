@@ -10,7 +10,7 @@ Les faits techniques cités ont été **vérifiés** (endpoints testés, CORS, v
 
 | ID | Idée | Utilité | Difficulté | U/D | Effort | Dépendance / risque principal |
 |---|------|:------:|:---------:|:---:|:------:|-------------------------------|
-| 1 | Profils « Prudent / Équilibré / Agressif » | 3 | 1 | **3,0** | ~1 h | Aucune |
+| 1 | ✅ **Fait** — Profils « Prudent / Équilibré / Agressif » | 3 | 1 | **3,0** | ~1 h | Aucune |
 | 2 | ✅ **Fait** — Flips Bazaar → NPC (revente au PNJ) | 4 | 2 | **2,0** | ~3 h | Fichier items Hypixel de 5 Mo → à pré-filtrer |
 | 3 | Simulateur d'objectif / intérêts composés | 2 | 1 | **2,0** | ~1 h | Aucune |
 | 4 | ✅ **Fait** — Export / import du suivi et des favoris | 3 | 2 | **1,5** | ~3 h | Aucune |
@@ -31,7 +31,7 @@ Les faits techniques cités ont été **vérifiés** (endpoints testés, CORS, v
 
 ## Détail des idées
 
-### 1. Profils de risque — U3 · D1
+### 1. Profils de risque — U3 · D1 — ✅ fait
 Trois boutons qui règlent d'un coup le risque max, la part de marché captée, la durée de cycle et le volume minimum. Idéal pour un débutant qui ne veut pas comprendre 5 réglages. Très peu de code : ces réglages existent déjà.
 
 ### 2. Flips Bazaar → NPC — U4 · D2 — ✅ fait
