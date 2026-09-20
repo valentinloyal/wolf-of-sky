@@ -113,6 +113,20 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .books th:first-child,.books td:first-child{text-align:left}
 @media(max-width:640px){.books{grid-template-columns:1fr}.part{grid-template-columns:110px 1fr 34px}}
 
+/* historique */
+.chartwrap{position:relative}
+.chartwrap svg{width:100%;height:auto;display:block;background:var(--bg);border:1px solid var(--line);border-radius:8px;touch-action:pan-y}
+.ctip{display:none;position:absolute;top:8px;left:0;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;pointer-events:none;white-space:nowrap;z-index:2}
+.leg{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:0 0 6px}
+.sw{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+.hscroll{overflow-x:auto}
+.hour{min-width:640px;font-size:12px}
+.hour th,.hour td{padding:5px 4px;text-align:center;border-bottom:1px solid var(--line);position:static;background:none;white-space:nowrap}
+.hour th:first-child{text-align:left;white-space:normal;min-width:170px;color:var(--text);font-weight:500}
+.hour td:nth-child(2),.hour th:nth-child(2){text-align:center}
+.hour td.best{outline:2px solid var(--gold);outline-offset:-2px;font-weight:700}
+.hour td.now,.hour th.now{text-decoration:underline}
+
 /* guide */
 .guide{display:grid;gap:14px;max-width:900px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
@@ -310,9 +324,9 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <li><b>Manipulation / prix suspect</b> : marge brute anormalement grande (&gt; 15 %) ou prix du haut du carnet très éloigné du prix moyen pondéré (un ordre isolé ou un piège). Les marges « trop belles » sont presque toujours des pièges.</li>
         <li><b>Liquidité</b> : combien de temps il faudrait pour acheter puis revendre ta quantité. Plus c'est long, plus tu es exposé aux variations de prix.</li>
         <li><b>Marge fragile</b> : si la marge nette est faible (&lt; 4 %), une petite baisse de prix ou un undercut efface ton gain.</li>
-        <li><b>Volatilité / tendance</b> : déséquilibre entre ventes et achats instantanés (pression vendeuse = risque de baisse) et, une fois l'historique collecté par la page, amplitude et baisse récente du prix.</li>
+        <li><b>Volatilité / tendance</b> : déséquilibre entre ventes et achats instantanés (pression vendeuse = risque de baisse) et, pour les meilleurs candidats, l'historique des 7 derniers jours : écart entre le prix actuel et le prix « habituel », fourchette de variation, tendance à la baisse. Un prix très <i>sous</i> son niveau habituel n'est pas forcément une bonne affaire : c'est souvent un prix qui s'effondre.</li>
       </ul>
-      <div class="warn">L'historique de prix se construit pendant que la page reste ouverte (sauvegardé dans ton navigateur). Les premières minutes, la volatilité est estimée uniquement avec le déséquilibre ventes/achats.</div>
+      <div class="warn">L'historique 7 jours est chargé en arrière-plan pour les ~15 meilleurs candidats (et à l'ouverture d'une fiche). Un item sans historique chargé n'est jugé que sur le déséquilibre ventes/achats et sur ce que la page a collecté depuis son ouverture.</div>
     </div>
 
     <div class="card">
@@ -342,6 +356,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
       <ul>
         <li>Carnet d'ordres et volumes : <a href="https://api.hypixel.net/skyblock/bazaar" target="_blank" rel="noopener">API officielle Hypixel SkyBlock Bazaar</a> (publique, sans clé). skyblock.bz utilise ces mêmes données.</li>
         <li>Noms d'items et comparaison : <a href="https://skyblock.bz/flips" target="_blank" rel="noopener">skyblock.bz/flips</a>.</li>
+        <li>Historique des prix (7 jours, 30 jours) : <a href="https://sky.coflnet.com/" target="_blank" rel="noopener">Coflnet</a>.</li>
         <li>Pour aller plus loin : <a href="https://sky.coflnet.com/guides/how-to-flip" target="_blank" rel="noopener">guide du flipping (Coflnet)</a>, <a href="https://sky.coflnet.com/guides/avoid-taxes-and-losses" target="_blank" rel="noopener">éviter taxes et pertes</a>.</li>
       </ul>
     </div>
@@ -522,19 +537,89 @@ function computeRisk(b, d){
       ? `Les joueurs vendent en instantané bien plus (×${(b.is/b.ib).toFixed(1)}) qu'ils n'achètent : pression vendeuse, le prix risque de baisser et ta revente sera plus lente.`
       : `Les joueurs achètent en instantané bien plus (×${(b.ib/b.is).toFixed(1)}) qu'ils ne vendent : ton ordre d'achat sera long à remplir et le prix peut monter avant.`);
   }
-  const h = histStats(b.id);
+  // historique 7 jours (Coflnet) si disponible, sinon celui collecté localement par la page
+  const ext = weekStats(b);
+  const h = ext ? null : histStats(b.id);
   let histS = null;
-  if(h){
+  if(ext){
+    const bandS = clamp01((ext.band-0.05)/0.20)*100;
+    const devS = clamp01((Math.abs(ext.dev)-0.05)/0.15)*100;
+    histS = Math.max(bandS, devS);
+    if(ext.dev < -0.08){
+      if(ext.falling) histS = Math.max(histS, 70);
+      reasons.push(`Le prix actuel est ${(-ext.dev*100).toFixed(0)} % SOUS son niveau habituel des 7 derniers jours${ext.falling?" et la tendance est à la baisse depuis plusieurs jours":""} : ce n'est peut-être pas une bonne affaire mais un prix qui s'effondre. Tu risques de revendre moins cher que prévu.`);
+    }else if(ext.dev > 0.08){
+      reasons.push(`Le prix actuel est ${(ext.dev*100).toFixed(0)} % AU-DESSUS de son niveau habituel (7 jours) : tu risques d'acheter près du sommet avant un retour à la normale.`);
+    }
+    if(bandS > 35) reasons.push(`Sur 7 jours, le prix varie beaucoup : 80 % du temps il reste dans une fourchette de ${(ext.band*100).toFixed(0)} % de large.`);
+  }else if(h){
     histS = Math.max(clamp01((h.range-0.02)/0.08)*100, clamp01((h.drop-0.02)/0.06)*100);
     if(histS > 35) reasons.push(`Sur ${fmtDur(h.minutes/60)} d'historique, le prix a varié de ${(h.range*100).toFixed(1)} %${h.drop>0.02?` et a reculé de ${(h.drop*100).toFixed(1)} % depuis son pic`:""}.`);
   }
-  const volat = histS == null ? imbS : 0.4*imbS + 0.6*histS;
+  // l'historique réel est le signal le plus fiable : il ne doit pas être dilué par le déséquilibre ventes/achats
+  const volat = histS == null ? imbS : Math.max(histS, 0.4*imbS + 0.6*histS);
   const parts = {manip, liq, fragile, volat};
   const weighted = .30*manip + .25*liq + .20*fragile + .25*volat;
   const worst = Math.max(manip, liq, fragile, volat);
   const total = Math.max(5, Math.round(.6*weighted + .4*worst));   // le risque zéro n'existe pas
   if(!reasons.length) reasons.push("Aucun signal d'alerte majeur détecté (ça ne veut pas dire « sans risque » : vérifie toujours le carnet en jeu).");
-  return {total, parts, reasons, hasHist: !!h};
+  return {total, parts, reasons, hasHist: !!(ext || h)};
+}
+
+/* ============================== HISTORIQUE LONG (Coflnet) ============================== */
+const CF_URL = "https://sky.coflnet.com/api/bazaar/";
+const EXT_TTL = 30*60e3;
+const extCache = {};                       // id -> {t, week:[{t,buy,sell}], daily:[...]}
+let prefetching = false, extFetched = 0;
+// Dans ces séries : "buy" = prix de revente (offres de vente, haut), "sell" = prix d'achat (ordres d'achat, bas)
+const parseTs = s => Date.parse(/Z|[+-]\d\d:\d\d$/.test(s) ? s : s+"Z");   // les dates de l'API sont en UTC
+const median = a => { const s=a.filter(Number.isFinite).sort((x,y)=>x-y); return s.length ? s[s.length>>1] : NaN; };
+async function getSeries(id, suffix){
+  const r = await fetch(CF_URL+encodeURIComponent(id)+suffix);
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const raw = await r.json();
+  return raw.map(x=>({t:parseTs(x.timestamp), buy:x.buy, sell:x.sell})).filter(p=>p.buy>0 && p.sell>0).sort((a,b)=>a.t-b.t);
+}
+const isFresh = id => extCache[id] && Date.now()-extCache[id].t < EXT_TTL;
+async function loadWeek(id){
+  if(isFresh(id) && extCache[id].week) return extCache[id].week;
+  const week = await getSeries(id, "/history/week");
+  extCache[id] = Object.assign(extCache[id]||{}, {t:Date.now(), week});
+  return week;
+}
+async function loadDaily(id){
+  if(extCache[id] && extCache[id].daily) return extCache[id].daily;
+  const daily = await getSeries(id, "/history");
+  extCache[id] = Object.assign(extCache[id]||{t:Date.now()}, {daily});
+  return daily;
+}
+function weekStats(b){
+  const c = extCache[b.id];
+  if(!c || !c.week || c.week.length < 20) return null;
+  const mids = c.week.map(p=>(p.buy+p.sell)/2);
+  const s = mids.slice().sort((x,y)=>x-y);
+  const q = f => s[Math.min(s.length-1, Math.floor(f*s.length))];
+  const med = q(0.5), cur = (b.bidTop+b.askTop)/2, third = Math.floor(mids.length/3);
+  const first = median(mids.slice(0,third)), last = median(mids.slice(-third));
+  return {med, band:(q(0.9)-q(0.1))/med, dev:(cur-med)/med, falling:(last-first)/first < -0.05};
+}
+// Récupère en arrière-plan l'historique des meilleurs candidats pour affiner leur risque
+async function prefetchTop(rows){
+  if(prefetching || extFetched > 150) return;
+  const ids = rows.slice().sort((a,b)=>b.score-a.score).slice(0,15).map(d=>d.b.id).filter(id=>!isFresh(id));
+  if(!ids.length) return;
+  prefetching = true;
+  let got = 0;
+  await Promise.all([0,1,2].map(async ()=>{
+    while(ids.length){
+      const id = ids.shift();
+      try{ await loadWeek(id); got++; }
+      catch(e){ extCache[id] = {t:Date.now(), week:null}; }
+      extFetched++;
+    }
+  }));
+  prefetching = false;
+  if(got) render();
 }
 
 /* ============================== FETCH ============================== */
@@ -625,6 +710,7 @@ function render(){
   $("#histInfo").textContent = maxMin>=10 ? `Historique : ${tracked} items suivis sur ${fmtDur(maxMin/60)}` : `Historique en cours de collecte (${tracked} items suivis)`;
   renderPlan();
   tickStatus();
+  prefetchTop(rows);
 }
 
 function riskHTML(r){
@@ -632,11 +718,18 @@ function riskHTML(r){
   return `<span class="risk" title="Score de risque ${r.total}/100"><span class="rl c-${l.k}">${l.label} · ${r.total}</span><span class="rbar"><i class="b-${l.k}" style="width:${Math.max(6,r.total)}%"></i></span></span>`;
 }
 
+function vsUsual(b){
+  const w = weekStats(b);
+  if(!w || Math.abs(w.dev) < 0.03) return "";
+  const c = Math.abs(w.dev) > 0.08 ? "c-o" : "mut";
+  return ` · <span class="${c}" title="Prix actuel comparé à la médiane des 7 derniers jours">${w.dev>0?"+":"−"}${(Math.abs(w.dev)*100).toFixed(0)} % vs habituel${w.falling?" ↘":""}</span>`;
+}
+
 function rowHTML(d,i){
   const b = d.b;
   return `<tr data-id="${esc(b.id)}">
     <td class="rank">${i+1}</td>
-    <td><div class="iname">${esc(b.name)}</div><div class="iid">${esc(b.id)}</div></td>
+    <td><div class="iname">${esc(b.name)}</div><div class="iid">${esc(b.id)}${vsUsual(b)}</div></td>
     <td title="${full(b.entry)} → ${full(b.exit)}">${fmt(b.entry)} → ${fmt(b.exit)}</td>
     <td class="pos" title="+${full(d.net)} coins/unité après taxe">+${(d.roi*100).toFixed(1)} %</td>
     <td class="mut" title="Ventes instantanées /h (remplit ton achat) · Achats instantanés /h (remplit ta vente)">${fmt(b.is)} · ${fmt(b.ib)}</td>
@@ -718,14 +811,139 @@ const PART_LABELS = {
   fragile:["Marge fragile","Marge nette trop faible face aux variations"],
   volat:["Volatilité / tendance","Pression vendeuse et variation du prix"]
 };
+const HOUR_LABEL = s => `${s*2}h–${(s*2+2)%24}h`;
+const signed = x => (x>0?"+":x<0?"−":"")+(Math.abs(x)*100).toFixed(1).replace(".",",")+" %";
+
+async function renderHistory(b){
+  const id = b.id, dlg = $("#dlg"), box = $("#histBox");
+  if(!box) return;
+  try{
+    const wasFresh = isFresh(id) && extCache[id].week;
+    const [week, daily] = await Promise.all([loadWeek(id), loadDaily(id).catch(()=>null)]);
+    if(dlg.dataset.id !== id) return;
+    if(!wasFresh){    // l'historique vient d'arriver : le score de risque a pu changer, on rafraîchit la fiche
+      const st = dlg.scrollTop; openDetail(id); dlg.scrollTop = st; render(); return;
+    }
+    if(week.length < 12){ box.innerHTML = `<p class="note">Historique trop court pour cet item.</p>`; return; }
+    box.innerHTML = historyHTML(b, week, daily);
+    attachChart(box, week);
+  }catch(e){
+    console.error(e);
+    if(dlg.dataset.id === id && $("#histBox")) $("#histBox").innerHTML = `<p class="note">Historique indisponible pour le moment (source : sky.coflnet.com). Réessaie plus tard.</p>`;
+  }
+}
+
+function historyHTML(b, week, daily){
+  const buyRef = median(week.map(p=>p.sell)), sellRef = median(week.map(p=>p.buy));   // prix d'achat / de revente habituels
+  const grossRef = sellRef/buyRef - 1, grossNow = b.exit/b.entry - 1;
+  const d30 = daily ? daily.slice(-30) : [];
+  const buy30 = d30.length>=5 ? median(d30.map(p=>p.sell)) : NaN, sell30 = d30.length>=5 ? median(d30.map(p=>p.buy)) : NaN;
+  const devB = b.bidTop/buyRef - 1, devS = b.askTop/sellRef - 1;
+  const cls = v => Math.abs(v) < 0.05 ? "mut" : "c-o";
+  const w = weekStats(b);
+
+  // profil par heure de la journée (heure locale, tranches de 2 h)
+  const slots = Array.from({length:12}, ()=>({sell:[],buy:[],spr:[]}));
+  for(const p of week){
+    const dt = new Date(p.t), s = Math.floor((dt.getHours()+dt.getMinutes()/60)/2)%12;
+    slots[s].sell.push(p.sell); slots[s].buy.push(p.buy); slots[s].spr.push(p.buy/p.sell-1);
+  }
+  const sprRef = median(week.map(p=>p.buy/p.sell-1));
+  const prof = slots.map(s=>s.sell.length>=2 ? {b:median(s.sell)/buyRef-1, s:median(s.buy)/sellRef-1, m:median(s.spr)} : null);
+  const valid = prof.map((p,i)=>p?i:-1).filter(i=>i>=0);
+  const argBy = (f, dir) => valid.reduce((best,i)=> best<0 || dir*f(prof[i]) > dir*f(prof[best]) ? i : best, -1);
+  const bestBuy = argBy(p=>p.b,-1), bestSell = argBy(p=>p.s,1), bestSpr = argBy(p=>p.m,1);
+  const amp = valid.length ? Math.max(...valid.map(i=>Math.max(Math.abs(prof[i].b),Math.abs(prof[i].s)))) : 0;
+  const nowSlot = Math.floor(new Date().getHours()/2)%12;
+  const cell = (v, i, good, key) => {
+    if(v==null) return `<td class="mut">–</td>`;
+    const a = Math.min(0.55, Math.abs(v)/(amp||1)*0.55);
+    const isGood = (good>0) === (v>0);
+    const bg = Math.abs(v) < 0.002 ? "transparent" : `rgba(${isGood?"63,185,80":"248,81,73"},${a.toFixed(2)})`;
+    return `<td style="background:${bg}" class="${i===key?"best":""} ${i===nowSlot?"now":""}">${v>0?"+":v<0?"−":""}${(Math.abs(v)*100).toFixed(1).replace(".",",")}</td>`;
+  };
+  const row = (label, sel, good, key) => `<tr><th>${label}</th>${prof.map((p,i)=>cell(p?sel(p):null,i,good,key)).join("")}</tr>`;
+
+  const advice = [];
+  if(valid.length >= 6 && amp >= 0.01){
+    advice.push(`🛒 <b>Placer tes ordres d'achat</b> vers <b>${HOUR_LABEL(bestBuy)}</b> : le prix d'achat est en général ${signed(prof[bestBuy].b)} par rapport à la moyenne.`);
+    advice.push(`💰 <b>Vendre / relister</b> vers <b>${HOUR_LABEL(bestSell)}</b> : le prix de revente est en général ${signed(prof[bestSell].s)}.`);
+    if(bestSpr>=0) advice.push(`📊 <b>Écart d'achat/revente le plus large</b> vers <b>${HOUR_LABEL(bestSpr)}</b> (≈ ${(prof[bestSpr].m*100).toFixed(1).replace(".",",")} % contre ${(sprRef*100).toFixed(1).replace(".",",")} % en moyenne).`);
+  }else{
+    advice.push(`Le prix de cet item varie très peu selon l'heure (moins de 1 %) : le moment de la journée compte peu, surveille plutôt la tendance sur plusieurs jours.`);
+  }
+
+  return `
+    <div class="hero-grid" style="margin:0 0 12px">
+      <div class="kpi"><b>${fmt(buyRef)}</b><span>prix d'achat habituel (médiane 7 j) · <span class="${cls(devB)}">actuel ${fmt(b.bidTop)} (${signed(devB)})</span></span></div>
+      <div class="kpi"><b>${fmt(sellRef)}</b><span>prix de revente habituel (médiane 7 j) · <span class="${cls(devS)}">actuel ${fmt(b.askTop)} (${signed(devS)})</span></span></div>
+      <div class="kpi"><b>${(grossRef*100).toFixed(1).replace(".",",")} %</b><span>écart brut habituel · aujourd'hui ${(grossNow*100).toFixed(1).replace(".",",")} %</span></div>
+      ${isFinite(buy30) ? `<div class="kpi"><b>${fmt(buy30)} → ${fmt(sell30)}</b><span>prix habituel sur 30 jours (achat → revente)</span></div>`:""}
+    </div>
+    ${w && w.dev < -0.08 ? `<div class="warn">⚠️ Le prix est actuellement <b>${(-w.dev*100).toFixed(0)} % sous son niveau habituel</b>${w.falling?" et il est <b>en baisse depuis plusieurs jours</b>":""}. Une « bonne affaire » apparente peut être un prix qui continue de chuter : ne mise pas gros et vérifie le carnet.</div>`:""}
+    ${w && w.dev > 0.08 ? `<div class="warn">⚠️ Le prix est <b>${(w.dev*100).toFixed(0)} % au-dessus de son niveau habituel</b> : risque d'acheter près d'un sommet.</div>`:""}
+    <div class="leg"><span><i class="sw" style="background:var(--gold)"></i>Prix de revente (offres de vente)</span><span><i class="sw" style="background:var(--blue)"></i>Prix d'achat (ordres d'achat)</span><span><i class="sw" style="background:var(--muted);height:0;border-top:2px dashed var(--muted)"></i>Médiane 7 j</span></div>
+    <div class="chartwrap"><svg id="hchart" viewBox="0 0 700 230" aria-label="Historique du prix sur 7 jours"></svg><div class="ctip" id="ctip"></div></div>
+    <h3 style="margin-top:16px">Quelles heures ? <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(écart par rapport à la moyenne de la semaine, en %, heure locale)</span></h3>
+    <div class="hscroll"><table class="hour">
+      <thead><tr><th></th>${prof.map((p,i)=>`<th class="${i===nowSlot?"now":""}">${i*2}h</th>`).join("")}</tr></thead>
+      <tbody>
+        ${row("Prix d'achat <span class='mut'>(bas = mieux)</span>", p=>p.b, -1, bestBuy)}
+        ${row("Prix de revente <span class='mut'>(haut = mieux)</span>", p=>p.s, 1, bestSell)}
+        ${row("Écart achat/revente <span class='mut'>(large = mieux)</span>", p=>p.m-sprRef, 1, bestSpr)}
+      </tbody>
+    </table></div>
+    <ul class="reasons" style="list-style:none;padding:0">${advice.map(x=>`<li>${x}</li>`).join("")}</ul>
+    <p class="note">Basé sur les 7 derniers jours (relevés toutes les 2 h, source : sky.coflnet.com), donc ça reste indicatif. Le nombre d'achats/ventes <i>par heure</i> n'existe pas en donnée publique : les « pics d'achat » affichés sont donc déduits des prix et de l'écart, pas du volume.</p>`;
+}
+
+function attachChart(box, week){
+  const svg = box.querySelector("#hchart"), tip = box.querySelector("#ctip"); if(!svg) return;
+  const b = bases.find(x=>x.id===$("#dlg").dataset.id);
+  const W=700, H=230, pl=58, pr=12, pt=12, pb=26, now=Date.now();
+  const t0 = week[0].t, t1 = Math.max(now, week[week.length-1].t);
+  const vals = week.flatMap(p=>[p.buy,p.sell]); if(b) vals.push(b.bidTop, b.askTop);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi-lo)*0.08 || hi*0.02; lo -= pad; hi += pad;
+  const X = t => pl + (t-t0)/(t1-t0)*(W-pl-pr), Y = v => pt + (1-(v-lo)/(hi-lo))*(H-pt-pb);
+  const path = k => week.map((p,i)=>(i?"L":"M")+X(p.t).toFixed(1)+" "+Y(p[k]).toFixed(1)).join("");
+  const medB = median(week.map(p=>p.sell)), medS = median(week.map(p=>p.buy));
+  let g = "";
+  for(let i=0;i<=4;i++){ const v = lo+(hi-lo)*i/4, y = Y(v).toFixed(1);
+    g += `<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#2a3342" stroke-width="1"/><text x="${pl-6}" y="${(+y+4)}" text-anchor="end" fill="#8b98a9" font-size="11">${fmt(v)}</text>`; }
+  const d = new Date(t0); d.setHours(24,0,0,0);
+  for(; d.getTime() < t1; d.setDate(d.getDate()+1)){ const x = X(d.getTime()).toFixed(1);
+    g += `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="#2a3342" stroke-dasharray="2 4"/><text x="${x}" y="${H-8}" text-anchor="middle" fill="#8b98a9" font-size="11">${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"})}</text>`; }
+  g += `<line x1="${pl}" x2="${W-pr}" y1="${Y(medS)}" y2="${Y(medS)}" stroke="#f5c542" stroke-opacity=".5" stroke-dasharray="6 5"/>`
+     + `<line x1="${pl}" x2="${W-pr}" y1="${Y(medB)}" y2="${Y(medB)}" stroke="#58a6ff" stroke-opacity=".5" stroke-dasharray="6 5"/>`
+     + `<path d="${path("buy")}" fill="none" stroke="#f5c542" stroke-width="2" vector-effect="non-scaling-stroke"/>`
+     + `<path d="${path("sell")}" fill="none" stroke="#58a6ff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+  if(b) g += `<circle cx="${X(now)}" cy="${Y(b.askTop)}" r="4" fill="#f5c542" stroke="#0d1117"/><circle cx="${X(now)}" cy="${Y(b.bidTop)}" r="4" fill="#58a6ff" stroke="#0d1117"/>`;
+  g += `<line id="cline" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="#e6edf3" stroke-opacity=".5" visibility="hidden"/>`;
+  svg.innerHTML = g;
+  const line = svg.querySelector("#cline"), wrap = svg.parentElement;
+  svg.addEventListener("pointermove", ev=>{
+    const r = svg.getBoundingClientRect(), vx = (ev.clientX-r.left)/r.width*W;
+    const t = t0 + (vx-pl)/(W-pl-pr)*(t1-t0);
+    let best = week[0]; for(const p of week) if(Math.abs(p.t-t) < Math.abs(best.t-t)) best = p;
+    line.setAttribute("x1", X(best.t)); line.setAttribute("x2", X(best.t)); line.setAttribute("visibility","visible");
+    tip.style.display = "block";
+    tip.innerHTML = `<b>${new Date(best.t).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</b><br>Revente ${full(best.buy)}<br>Achat ${full(best.sell)}`;
+    const left = (ev.clientX - wrap.getBoundingClientRect().left);
+    tip.style.left = Math.min(Math.max(left+12, 0), wrap.clientWidth-150)+"px";
+  });
+  svg.addEventListener("pointerleave", ()=>{ tip.style.display="none"; line.setAttribute("visibility","hidden"); });
+}
+
 function openDetail(id){
   const b = bases.find(x=>x.id===id); if(!b) return;
   let d = derive(b, cfg.budget);
   const dlg = $("#dlg");
+  dlg.dataset.id = id;
+  const showDlg = () => { if(!dlg.open) dlg.showModal(); };
   if(!d || d.tooExpensive){
     dlg.innerHTML = `<div class="dhead"><div style="flex:1"><b style="font-size:18px">${esc(b.name)}</b></div><button class="btn" data-close>✕</button></div>
       <div class="dbody"><p>Cet item n'est pas rentable ou trop cher pour ton budget (1 unité ≈ ${fmt(b.entry)} coins).</p></div>`;
-    dlg.showModal(); return;
+    showDlg(); return;
   }
   const r = d.risk, l = riskLevel(r.total);
   const recv = d.units * b.exit * (1-cfg.tax);
@@ -779,6 +997,11 @@ function openDetail(id){
       </div>
 
       <div>
+        <h3>Prix habituel &amp; meilleures heures</h3>
+        <div id="histBox"><p class="note">Chargement de l'historique…</p></div>
+      </div>
+
+      <div>
         <h3>Carnet d'ordres (haut du carnet)</h3>
         <div class="books">
           ${bookTbl(b.asks,"Offres de vente (prix)")}
@@ -787,7 +1010,7 @@ function openDetail(id){
         <p class="note">Volume : ${fmt(b.is)} ventes instantanées /h · ${fmt(b.ib)} achats instantanés /h (moyenne 7 jours). Quantité limitée par le <b>${d.limitedBy}</b> (${d.units.toLocaleString("fr-FR")} sur ${d.cap.toLocaleString("fr-FR")} max. pour la durée de cycle).</p>
       </div>
     </div>`;
-  dlg.showModal();
+  showDlg(); renderHistory(b);
 }
 
 /* ============================== EVENTS ============================== */
