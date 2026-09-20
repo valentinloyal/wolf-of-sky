@@ -208,7 +208,15 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
 .fform h3{margin:0 0 10px;font-size:14px;font-weight:600}
 .fform label{display:grid;gap:6px;font-size:12px;color:var(--t2)}
 .fform input{height:36px;font:600 18px var(--fm);color:var(--t1)}
-.frow{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:12px}
+.frow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-end;margin-top:12px}
+#bdlg{width:min(560px,94vw);margin:auto;border:1px solid var(--ln2);border-radius:var(--r);max-height:92vh;overflow-y:auto}
+#bdlg textarea{width:100%;margin-top:8px;background:var(--bg);border:1px solid var(--ln2);border-radius:var(--r);padding:8px 10px;font:400 11.5px/1.45 var(--fm);color:var(--t1);resize:vertical}
+#bdlg textarea:focus{outline:none;border-color:var(--ice)}
+#bdlg input[type=file]{width:100%;font:400 12px var(--fm);color:var(--t2)}
+#bdlg input[type=file]::file-selector-button{margin-right:10px;height:28px;padding:0 11px;background:var(--s2);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t1);font:500 12.5px var(--fs);cursor:pointer}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t1);margin:5px 0;cursor:pointer}
+.chk input{accent-color:var(--ice)}
+.bk-opts{margin-top:6px}
 
 /* ---------- cartes / textes ---------- */
 .card{background:var(--s1);border:1px solid var(--ln);border-radius:var(--r);padding:14px 16px}
@@ -332,6 +340,7 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.2"/></symbol>
   </defs>
 </svg>
@@ -362,6 +371,7 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
   <div class="evstrip" id="evStrip"></div>
   <div class="spacer"></div>
   <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusTxt">Chargement…</span></div>
+  <button class="btn ghost" id="backupBtn" title="Exporter / importer tes favoris, ton suivi et tes réglages"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg><span>Sauvegarde</span></button>
   <button class="btn ghost" id="shareLink" title="Copier un lien qui reprend tes réglages (budget, risque…)"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg><span>Partager</span></button>
   <button class="btn ghost" id="refresh" title="Recharger les prix maintenant"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span>Actualiser</span></button>
 </header>
@@ -600,6 +610,7 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
       <p>Tu peux activer les notifications du navigateur pour être prévenu quand un ordre doit être ajusté (la page doit rester ouverte). Tout est enregistré dans ton navigateur, rien n'est envoyé ailleurs.</p>
       <div class="tip">Les prix d'ordres sont affichés avec <b>1 décimale</b> (ex. 2 250 246,5) : au Bazaar, 0,1 coin suffit pour passer devant, tape le prix exact.</div>
       <p><b>Favoris</b> : clique sur l'étoile d'un item (tableau, fiche, ou recherche de l'onglet Favoris) pour le surveiller. L'onglet les affiche <b>même s'ils ne passent pas tes filtres</b> (risque, volume, budget), avec un statut clair : rentable, marge faible, risque élevé, trop cher, pas rentable. Le nombre de favoris rentables est indiqué sur l'onglet, et tu peux être notifié quand l'un d'eux le devient.</p>
+      <p><b>Sauvegarde</b> : le bouton du même nom (en haut) exporte tes favoris, ton suivi et tes réglages dans un fichier <span class="mono">.json</span>, et les réimporte ailleurs (un autre navigateur ou appareil) en <i>fusionnant</i> avec l'existant ou en le <i>remplaçant</i>. Les données ne quittent jamais ton navigateur, et un fichier importé est vérifié entrée par entrée avant d'être accepté. Pense à en faire une avant de vider les données de ton navigateur.</p>
       <p>Le bouton <b>Partager</b> en haut copie un lien qui reprend tes réglages (budget, risque, durée de cycle…) : pratique pour l'envoyer à un ami.</p>
     </div>
 
@@ -651,6 +662,7 @@ dialog::backdrop{background:rgba(3,5,7,.62)}
 
 <dialog id="dlg"></dialog>
 <dialog id="fdlg"></dialog>
+<dialog id="bdlg"></dialog>
 
 <script>
 "use strict";
@@ -2155,6 +2167,164 @@ async function trackerAction(pid, act){
   }
 }
 
+/* ============================== SAUVEGARDE (export / import) ============================== */
+// Ce qui est sauvegardé : favoris, suivi des flips, réglages. Pas les caches de prix (ils se reconstruisent seuls).
+const BACKUP_APP = "wolf-of-sky", BACKUP_VERSION = 1;
+const SETTING_KEYS = ["budget","tax","share","cycleH","maxRisk","minVol","npcMin","planN"];
+const OK_TAX = [0.0125, 0.01125, 0.01], OK_SHARE = [0.1, 0.2, 0.35, 0.5], OK_CYCLE = [0.5, 1, 2, 4], OK_NPCMIN = [1000, 10000, 100000, 1000000];
+
+function buildBackup(withSettings){
+  const b = {app:BACKUP_APP, version:BACKUP_VERSION, exportedAt:new Date().toISOString(), favs, positions};
+  if(withSettings){ b.settings = {}; for(const k of SETTING_KEYS) b.settings[k] = cfg[k]; }
+  return b;
+}
+
+// Un fichier importé n'est jamais cru sur parole : chaque entrée est reconstruite champ par champ (types, bornes, caractères)
+// avant d'entrer dans l'appli. Les entrées invalides sont ignorées et comptées.
+const isStr = (v, n) => typeof v === "string" && v.length > 0 && v.length <= n;
+const isNum = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
+const ID_RE = /^[A-Za-z0-9_:.\-]+$/;
+function cleanFav(f){
+  return f && isStr(f.id, 120) && ID_RE.test(f.id) ? {id:f.id, name: isStr(f.name, 120) ? f.name : prettify(f.id)} : null;
+}
+function cleanPos(p){
+  if(!p || !isStr(p.pid, 40) || !ID_RE.test(p.pid) || !isStr(p.item, 120) || !ID_RE.test(p.item)) return null;
+  if(!["buy","sell","done"].includes(p.status)) return null;
+  if(!isNum(p.units, 1, 1e9) || !isNum(p.entry, 0.01, 1e12) || !isNum(p.exit, 0.01, 1e12) || !isNum(p.tax, 0, 0.1) || !isNum(p.createdAt, 1e12, 4e12)) return null;
+  const o = {pid:p.pid, item:p.item, name: isStr(p.name, 120) ? p.name : prettify(p.item), units:Math.floor(p.units),
+             entry:p.entry, exit:p.exit, tax:p.tax, status:p.status, createdAt:p.createdAt};
+  if(isNum(p.boughtAt, 1e12, 4e12)) o.boughtAt = p.boughtAt;
+  if(p.status === "done"){
+    if(!isNum(p.soldPrice, 0.01, 1e12) || !isNum(p.soldAt, 1e12, 4e12)) return null;
+    o.soldPrice = p.soldPrice; o.soldAt = p.soldAt;
+  }
+  return o;
+}
+function cleanSettings(s){
+  const o = {};
+  if(!s || typeof s !== "object") return o;
+  if(isNum(s.budget, 1, 1e13)) o.budget = s.budget;
+  if(OK_TAX.includes(s.tax)) o.tax = s.tax;
+  if(OK_SHARE.includes(s.share)) o.share = s.share;
+  if(OK_CYCLE.includes(s.cycleH)) o.cycleH = s.cycleH;
+  if(isNum(s.maxRisk, 10, 100)) o.maxRisk = s.maxRisk;
+  if(isNum(s.minVol, 1, 1e5)) o.minVol = s.minVol;
+  if(OK_NPCMIN.includes(s.npcMin)) o.npcMin = s.npcMin;
+  if(Number.isInteger(s.planN) && s.planN >= 2 && s.planN <= 6) o.planN = s.planN;
+  return o;
+}
+function parseBackup(text){
+  let j;
+  try{ j = JSON.parse(text); }catch(e){ return {error:"Ce texte n'est pas un JSON valide."}; }
+  if(!j || typeof j !== "object" || j.app !== BACKUP_APP) return {error:"Ce contenu n'est pas une sauvegarde Wolf of Sky."};
+  if(!Number.isInteger(j.version) || j.version < 1 || j.version > BACKUP_VERSION) return {error:"Version de sauvegarde inconnue (créée par une version plus récente ?)."};
+  const fIn = Array.isArray(j.favs) ? j.favs : [], pIn = Array.isArray(j.positions) ? j.positions : [];
+  if(fIn.length > 1000 || pIn.length > 2000) return {error:"Sauvegarde trop volumineuse."};
+  const f = fIn.map(cleanFav).filter(Boolean), p = pIn.map(cleanPos).filter(Boolean);
+  const d = new Date(j.exportedAt);
+  return {data:{favs:f, positions:p, settings:cleanSettings(j.settings)}, skipped:(fIn.length-f.length)+(pIn.length-p.length),
+          date: isFinite(d) ? d.toLocaleString("fr-FR",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : null};
+}
+function backupDiff(data){    // ce que la fusion ajouterait
+  const ids = new Set(favs.map(x=>x.id)), pids = new Set(positions.map(x=>x.pid));
+  return {newFavs:data.favs.filter(f=>!ids.has(f.id)).length, newPos:data.positions.filter(p=>!pids.has(p.pid)).length};
+}
+function syncControls(){      // recopie cfg dans les contrôles de la page
+  $("#budget").value = fmt(cfg.budget);
+  $("#maxRisk").value = cfg.maxRisk;
+  for(const [sel, key] of [["#cycleH","cycleH"],["#share","share"],["#tax","tax"],["#minVol","minVol"]]){
+    const el = $(sel); el.value = String(cfg[key]);
+    if(el.value !== String(cfg[key])) for(const o of el.options) if(+o.value === +cfg[key]) el.value = o.value;
+  }
+  $("#planN").value = String(cfg.planN); $("#npcMin").value = String(cfg.npcMin);
+}
+function applyBackup(data, mode, withSettings){
+  if(mode === "replace"){ favs = data.favs.slice(); positions = data.positions.slice(); }
+  else{
+    const ids = new Set(favs.map(x=>x.id)), pids = new Set(positions.map(x=>x.pid));
+    for(const f of data.favs) if(!ids.has(f.id)){ favs.push(f); ids.add(f.id); }
+    for(const p of data.positions) if(!pids.has(p.pid)){ positions.push(p); pids.add(p.pid); }
+  }
+  saveFavs(); savePos();
+  if(withSettings && Object.keys(data.settings).length){ Object.assign(cfg, data.settings); persist(); syncControls(); }
+  render(); renderFavs(); renderTracker();
+}
+
+function openBackup(){
+  const dlg = $("#bdlg");
+  const nDone = positions.filter(p=>p.status === "done").length;
+  dlg.innerHTML =
+    '<div class="dhead"><div style="flex:1"><div style="font-size:16px;font-weight:600">Sauvegarde</div><div class="mut" style="font-size:12px">favoris, suivi des flips et réglages : tout reste dans ton navigateur</div></div>'
+    + '<button class="btn ghost" id="bkClose" aria-label="Fermer"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>'
+    + '<div class="dbody">'
+    +   '<div><h3>Exporter</h3>'
+    +     '<p class="mut" style="margin:0 0 8px">' + favs.length + ' favori(s) · ' + positions.length + ' flip(s) suivi(s) dont ' + nDone + ' terminé(s)</p>'
+    +     '<label class="chk"><input type="checkbox" id="bkSet" checked> Inclure les réglages (capital, risque, taxe…)</label>'
+    +     '<div class="frow" style="justify-content:flex-start"><button class="btn gold" id="bkDl">Télécharger (.json)</button><button class="btn" id="bkCp">Copier</button><span class="hint" id="bkMsg"></span></div></div>'
+    +   '<div><h3>Importer</h3>'
+    +     '<input type="file" id="bkFile" accept=".json,application/json">'
+    +     '<textarea id="bkTxt" rows="5" spellcheck="false" placeholder="…ou colle ici le contenu d\'une sauvegarde"></textarea>'
+    +     '<div id="bkPrev" class="note"></div>'
+    +     '<div class="bk-opts"><label class="chk"><input type="radio" name="bkMode" value="merge" checked> Fusionner <span class="mut">(garde l\'existant, ajoute le nouveau)</span></label>'
+    +     '<label class="chk"><input type="radio" name="bkMode" value="replace"> Remplacer <span class="mut">(efface l\'existant)</span></label>'
+    +     '<label class="chk"><input type="checkbox" id="bkSetIn" checked> Appliquer aussi les réglages du fichier</label></div>'
+    +     '<div class="frow" style="justify-content:flex-start"><button class="btn gold" id="bkGo" disabled>Importer</button></div></div>'
+    + '</div>';
+
+  let parsed = null;
+  const prev = $("#bkPrev"), go = $("#bkGo");
+  const analyze = () => {
+    const txt = $("#bkTxt").value.trim();
+    parsed = null; go.disabled = true;
+    if(!txt){ prev.textContent = ""; return; }
+    const r = parseBackup(txt);
+    if(r.error){ prev.innerHTML = '<span class="c-r"></span>'; prev.firstChild.textContent = r.error; return; }
+    parsed = r;
+    const d = r.data, diff = backupDiff(d), nSet = Object.keys(d.settings).length;
+    const parts = [
+      d.favs.length + ' favori(s) (' + diff.newFavs + ' nouveau(x))',
+      d.positions.length + ' flip(s) suivi(s) (' + diff.newPos + ' nouveau(x))',
+      nSet ? nSet + ' réglage(s)' : 'sans réglages'
+    ];
+    prev.innerHTML = '<span class="c-g"></span>';
+    prev.firstChild.textContent = 'Sauvegarde' + (r.date ? ' du ' + r.date : '') + ' : ' + parts.join(' · ') + (r.skipped ? ' · ' + r.skipped + ' entrée(s) invalide(s) ignorée(s)' : '') + '.';
+    go.disabled = !(d.favs.length || d.positions.length || nSet);
+  };
+  $("#bkTxt").addEventListener("input", analyze);
+  $("#bkFile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; if(!f) return;
+    if(f.size > 2e6){ prev.textContent = "Fichier trop volumineux (2 Mo max)."; return; }
+    const rd = new FileReader();
+    rd.onload = () => { $("#bkTxt").value = String(rd.result); analyze(); };
+    rd.readAsText(f);
+  });
+  go.addEventListener("click", () => {
+    if(!parsed) return;
+    const mode = dlg.querySelector('input[name=bkMode]:checked').value;
+    if(mode === "replace" && (favs.length || positions.length) &&
+       !confirm("Remplacer tes " + favs.length + " favori(s) et " + positions.length + " flip(s) par le contenu de la sauvegarde ?")) return;
+    applyBackup(parsed.data, mode, $("#bkSetIn").checked);
+    prev.innerHTML = '<span class="c-g"></span>'; prev.firstChild.textContent = "Importé.";
+    go.disabled = true;
+    setTimeout(() => dlg.close(), 700);
+  });
+  $("#bkDl").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(buildBackup($("#bkSet").checked), null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "wolf-of-sky-" + new Date().toISOString().slice(0,10) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    $("#bkMsg").textContent = "Fichier téléchargé.";
+  });
+  $("#bkCp").addEventListener("click", async () => {
+    try{ await navigator.clipboard.writeText(JSON.stringify(buildBackup($("#bkSet").checked))); $("#bkMsg").textContent = "Copié dans le presse-papiers."; }
+    catch(e){ $("#bkMsg").textContent = "Copie impossible ici : utilise « Télécharger »."; }
+  });
+  $("#bkClose").addEventListener("click", () => dlg.close());
+  dlg.onclick = e => { if(e.target === dlg) dlg.close(); };
+  if(!dlg.open) dlg.showModal();
+}
+
 /* ============================== EVENTS ============================== */
 function init(){
   // chips
@@ -2225,6 +2395,7 @@ function init(){
   });
   $("#refresh").addEventListener("click", fetchAll);
   $("#favq").addEventListener("input", renderFavSearch);
+  $("#backupBtn").addEventListener("click", openBackup);
   $("#npcMin").value = String(cfg.npcMin);
   $("#npcMin").addEventListener("change", e => { cfg.npcMin = +e.target.value; persist(); renderNpc(); });
   $("#shareLink").addEventListener("click", async ()=>{

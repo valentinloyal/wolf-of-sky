@@ -13,7 +13,7 @@ Les faits techniques cités ont été **vérifiés** (endpoints testés, CORS, v
 | 1 | Profils « Prudent / Équilibré / Agressif » | 3 | 1 | **3,0** | ~1 h | Aucune |
 | 2 | ✅ **Fait** — Flips Bazaar → NPC (revente au PNJ) | 4 | 2 | **2,0** | ~3 h | Fichier items Hypixel de 5 Mo → à pré-filtrer |
 | 3 | Simulateur d'objectif / intérêts composés | 2 | 1 | **2,0** | ~1 h | Aucune |
-| 4 | Export / import du suivi et des favoris | 3 | 2 | **1,5** | ~3 h | Aucune |
+| 4 | ✅ **Fait** — Export / import du suivi et des favoris | 3 | 2 | **1,5** | ~3 h | Aucune |
 | 5 | Tests automatiques du moteur de calcul + CI | 3 | 2 | **1,5** | ~6 h | Extraire le JS de `index.html` |
 | 6 | Détection de manipulation avancée (murs, ordres isolés) | 4 | 3 | **1,3** | ~5 h | Seuils à calibrer, faux positifs |
 | 7 | Scan des effets d'événements sur tous les items (précalculé) | 4 | 3 | **1,3** | ~6 h | Limite de requêtes Coflnet (429) |
@@ -40,7 +40,7 @@ Acheter au Bazaar, revendre au PNJ à prix fixe : **quasiment sans risque** et s
 ### 3. Simulateur d'objectif — U2 · D1
 « Avec 5M et 2M/h, combien de temps pour 100M ? », avec et sans réinvestissement. Utile pour motiver, très simple, mais à présenter comme un ordre de grandeur (le profit/h réel baisse quand le capital grossit, le marché ne suit pas).
 
-### 4. Export / import — U3 · D2
+### 4. Export / import — U3 · D2 — ✅ fait
 Sauvegarder favoris et suivi dans un fichier ou un texte à copier, pour changer d'appareil ou de navigateur. Aujourd'hui tout est dans le `localStorage` : vider le navigateur efface tout.
 
 ### 5. Tests automatiques + CI — U3 · D2

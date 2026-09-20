@@ -19,6 +19,7 @@ Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton b
 - **Mon suivi** : suis tes ordres en cours (dépassé ? sous-coté ?), profit réel et rythme moyen, notifications optionnelles
 - **Flips PNJ** 🏪 : acheter au Bazaar, revendre au PNJ à prix fixe et sans taxe (achat instantané ou par ordre), prix plancher dans les fiches
 - **Favoris** ⭐ : surveille des items même hors filtres, avec statut et notification quand un favori devient rentable
+- **Sauvegarde** : export / import (JSON) des favoris, du suivi et des réglages, avec aperçu, fusion ou remplacement, validation stricte du fichier
 - Prix d'ordres à 0,1 coin près, lien de partage des réglages, affichage en cartes sur mobile
 - Plan de répartition du budget sur plusieurs items, guide débutant
 
