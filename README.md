@@ -2,8 +2,27 @@
 
 Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton budget, avec un score de risque.
 
-- Données en direct : API officielle Hypixel SkyBlock Bazaar + skyblock.bz
-- 100 % statique (un seul `index.html`), aucun serveur ni clé d'API
-- Les profits affichés sont des estimations, pas une garantie
+👉 **https://valentinloyal.github.io/wolf-of-sky/**
 
-Ouvre simplement `index.html` ou utilise la version GitHub Pages.
+## Fonctionnalités
+- Meilleurs flips pour ton budget, classés par profit/heure ajusté au risque, avec temps estimé d'achat et de vente
+- Score de risque (manipulation, liquidité, marge fragile, volatilité / tendance)
+- Historique 7 jours, prix habituel et meilleures heures de la journée
+- Calendrier SkyBlock (Spooky Festival, Season of Jerry, Jacob's Contest, …), maire en poste
+- Mesure de l'effet réel des événements sur le prix de chaque item (ex. Green Candy pendant le Spooky Festival)
+- Plan de répartition du budget sur plusieurs items, guide débutant
+
+## Données
+| Donnée | Source |
+|---|---|
+| Carnet d'ordres, volumes | [API Hypixel SkyBlock Bazaar](https://api.hypixel.net/skyblock/bazaar) (publique) et skyblock.bz |
+| Historique des prix | [Coflnet](https://sky.coflnet.com/) |
+| Maire | [API Hypixel](https://api.hypixel.net/v2/resources/skyblock/election) |
+| Planning du Jacob's Contest (cultures) | [jacobs.strassburger.dev](https://jacobs.strassburger.dev/) (secours : api.elitebot.dev) |
+
+## Fonctionnement
+Le site est un seul `index.html` sans dépendance. Le workflow [`pages.yml`](.github/workflows/pages.yml) le déploie sur GitHub Pages à chaque push **et toutes les heures**, pour récupérer côté serveur le planning du Jacob's Contest (`scripts/fetch-contests.mjs` → `contests.json`), car ces API ne permettent pas d'appels depuis un navigateur.
+
+En local, ouvre simplement `index.html` : tout marche sauf les cultures du Jacob's Contest.
+
+Les profits affichés sont des estimations, pas une garantie.

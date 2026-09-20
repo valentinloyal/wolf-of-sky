@@ -825,6 +825,20 @@ function evBadge(b){
 }
 
 /* --- affichage --- */
+// Planning du Jacob's Contest (dates + cultures) : généré chaque heure par le workflow GitHub Actions et servi avec le site
+let jacobData = null;
+async function loadJacob(){
+  try{
+    const r = await fetch("contests.json?"+Math.floor(Date.now()/600000), {cache:"no-store"});
+    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.contests) && j.contests.length) jacobData = j; }
+  }catch(e){}   // ouvert en local (file://) ou fichier absent : on affiche le planning sans les cultures
+  renderCalendar(); renderStrip();
+}
+function jacobCrops(start){
+  if(!jacobData) return null;
+  const c = jacobData.contests.find(x=>Math.abs(x.t-start) < 60e3);
+  return c ? c.crops : null;
+}
 let mayorInfo = null;
 const stripCodes = s => String(s||"").replace(/§./g,"");
 async function loadMayor(){
@@ -838,7 +852,9 @@ function renderStrip(){
   const el = $("#evStrip"); if(!el) return;
   const now = Date.now();
   const list = EVENTS.filter(measurable).map(ev=>({ev, ...evNext(ev, now)})).sort((a,b)=>(b.live-a.live)||(a.start-b.start)).slice(0,3);
-  el.innerHTML = `<span class="mut">📅 Événements :</span> ` + list.map(x=>
+  const jev = EVENTS.find(e=>e.key==="jacob"), jn = evNext(jev, now), jc = jacobCrops(jn.start);
+  const jchip = `<a href="#" data-gocal="1" class="evchip ${jn.live?"live":""}">${jev.icon} Jacob <b class="cd" data-t="${jn.live?jn.end:jn.start}" data-live="${jn.live?1:0}">${jn.live?"en cours":"dans "+fmtCountdown(jn.start-now)}</b>${jc?` <span class="mut">· ${jc.map(esc).join(", ")}</span>`:""}</a>`;
+  el.innerHTML = `<span class="mut">📅 Événements :</span> ` + jchip + list.map(x=>
     `<a href="#" data-gocal="1" class="evchip ${x.live?"live":""}">${x.ev.icon} ${esc(x.ev.name)} <b class="cd" data-t="${x.live?x.end:x.start}" data-live="${x.live?1:0}">${x.live?"en cours":"dans "+fmtCountdown(x.start-now)}</b></a>`).join("");
 }
 function tickEvents(){
@@ -847,6 +863,20 @@ function tickEvents(){
     const t = +el.dataset.t, live = el.dataset.live==="1";
     el.textContent = live ? `en cours · fin dans ${fmtCountdown(t-now)}` : `dans ${fmtCountdown(t-now)}`;
   });
+}
+function jacobHTML(ev, start, live){
+  const period = ev.periodic.period, hm = t => new Date(t).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  const rows = [0,1,2,3,4,5].map(k=>{
+    const s = start + k*period, c = jacobCrops(s);
+    return `<li><b>${hm(s)}</b>${k===0&&live?` <span class="c-o">(en cours)</span>`:""} — ${c ? c.map(esc).join(", ") : `<span class="mut">cultures pas encore connues</span>`}</li>`;
+  }).join("");
+  const known = jacobData && jacobData.contests.length;
+  const until = known ? fmtLocal(jacobData.contests[jacobData.contests.length-1].t) : "";
+  return `<div style="margin-top:8px"><div class="mut" style="font-size:12px">Prochains concours (heure locale) et leurs 3 cultures :</div><ul class="reasons" style="margin-top:4px">${rows}</ul></div>
+    <div class="note" style="margin:6px 0 0">Un concours démarre à chaque heure pile + 15 min (UTC) et dure 20 min.
+      ${known ? `Cultures : planning communautaire <a href="https://jacobs.strassburger.dev/" target="_blank" rel="noopener">jacobs.strassburger.dev</a>, mis à jour toutes les heures, connu jusqu'au ${until}.`
+              : `Les cultures ne sont pas disponibles ici (page ouverte en local ?) : consulte le menu de Jacob en jeu ou <a href="https://jacobs.strassburger.dev/" target="_blank" rel="noopener">jacobs.strassburger.dev</a>.`}
+      Comme il y a un concours par heure, son effet sur les prix ne peut pas être isolé avec l'historique quotidien : il n'est pas mesuré.</div>`;
 }
 function renderCalendar(){
   const el = $("#calOut"); if(!el) return;
@@ -885,8 +915,7 @@ function renderCalendar(){
       </div>
       <p style="margin:6px 0">${esc(ev.desc)}</p>
       <div class="mut" style="font-size:12.5px">${live?"Depuis":"Prochaine occurrence :"} <b>${fmtLocal(start)}</b> → ${fmtLocal(end)} <span class="mut">(heure locale)</span></div>
-      ${ev.periodic ? `<div class="mut" style="font-size:12.5px;margin-top:4px">Ensuite : ${[1,2,3,4].map(k=>new Date(start+k*ev.periodic.period).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})).join(" · ")}. Un concours démarre à chaque heure pile + 15 min (UTC).</div>
-        <div class="note" style="margin:8px 0 0">Les <b>3 cultures</b> de chaque concours sont tirées au sort et communiquées à l'avance : consulte le menu de Jacob en jeu ou un suivi communautaire comme <a href="https://jacobs.strassburger.dev/" target="_blank" rel="noopener">jacobs.strassburger.dev</a> (données collectées par la communauté). Comme il y a un concours toutes les heures, son effet sur les prix ne peut pas être isolé de manière fiable avec l'historique quotidien : je ne l'ai donc pas mesuré.</div>`:""}
+      ${ev.periodic ? jacobHTML(ev, start, live) : ""}
       ${seeds ? `<div style="margin-top:8px"><div class="mut" style="font-size:12px">Items à surveiller (effet mesuré sur l'historique réel) :</div><ul class="reasons" style="margin-top:4px">${seeds}</ul></div>`:""}
       ${long ? `<div class="note" style="margin:6px 0 0">Événement de longue durée : pas de mesure automatique, mais l'offre et la demande de certains items peuvent changer pendant toute la période.</div>`:""}
     </div>`;
@@ -1350,7 +1379,8 @@ function init(){
     if(name === "calendar"){ renderCalendar(); ensureSeeds(true); }
   };
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showTab(t.dataset.tab)));
-  renderStrip(); renderCalendar(); loadMayor();
+  renderStrip(); renderCalendar(); loadMayor(); loadJacob();
+  setInterval(loadJacob, 15*60e3);
   document.querySelector("thead").addEventListener("click", e=>{
     const th = e.target.closest("th[data-sort]"); if(!th) return;
     const k = th.dataset.sort;
