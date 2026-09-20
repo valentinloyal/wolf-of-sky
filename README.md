@@ -10,6 +10,9 @@ Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton b
 - Historique 7 jours, prix habituel et meilleures heures de la journée
 - Calendrier SkyBlock (Spooky Festival, Season of Jerry, Jacob's Contest, …), maire en poste
 - Mesure de l'effet réel des événements sur le prix de chaque item (ex. Green Candy pendant le Spooky Festival)
+- Détection des écarts « gonflés » : la marge actuelle est comparée à sa valeur habituelle sur 24 h (série de 5 min), avec un profit /h prudent
+- **Mon suivi** : suis tes ordres en cours (dépassé ? sous-coté ?), profit réel et rythme moyen, notifications optionnelles
+- Prix d'ordres à 0,1 coin près, lien de partage des réglages, affichage en cartes sur mobile
 - Plan de répartition du budget sur plusieurs items, guide débutant
 
 ## Données
