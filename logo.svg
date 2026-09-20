@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="256" height="256" role="img" aria-label="Wolf of Sky">
+  <title>Wolf of Sky</title>
+  <!-- Tête de loup facettée. La ligne de crête (oreille · front · oreille) dessine un W, comme un motif de courbe de prix.
+       Les pointes sur les joues forment la collerette. -->
+  <path d="M3.5 1.5 L11.6 9.6 L16 6.2 L16 31 L9.6 25 L8.4 20.2 L1.6 19.2 L4.6 13.4 Z" fill="#6FA8D3"/>
+  <path d="M28.5 1.5 L20.4 9.6 L16 6.2 L16 31 L22.4 25 L23.6 20.2 L30.4 19.2 L27.4 13.4 Z" fill="#9CCBEE"/>
+  <!-- yeux : la couleur de signal -->
+  <path d="M9 14.6 L13.7 16.6 L12.9 18.3 L9 16.4 Z" fill="#E5A13B"/>
+  <path d="M23 14.6 L18.3 16.6 L19.1 18.3 L23 16.4 Z" fill="#E5A13B"/>
+  <!-- museau -->
+  <path d="M14.3 26.4 L17.7 26.4 L16 28.9 Z" fill="#0B0E12"/>
+</svg>

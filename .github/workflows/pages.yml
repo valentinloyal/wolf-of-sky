@@ -27,7 +27,7 @@ jobs:
       - name: Assembler le site
         run: |
           mkdir _site
-          cp index.html _site/
+          cp -r index.html brand.html logo.svg fonts _site/
           node scripts/fetch-contests.mjs > _site/contests.json
           node scripts/fetch-npc.mjs > _site/npc.json
           head -c 200 _site/contests.json; echo

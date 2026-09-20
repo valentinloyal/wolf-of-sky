@@ -4,277 +4,428 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wolf of Sky — Bazaar Flipper</title>
+<meta name="theme-color" content="#090B0E">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <style>
+/* =====================================================================
+   WOLF OF SKY — direction artistique « ardoise »
+   Terminal de trading : dense, silencieux, chiffres tabulaires.
+   - Graphite quasi noir, séparateurs de 1 px, angles à 3 px, aucune ombre ni lueur.
+   - Glace  = marque, sélection, actions.      - Ambre = signal (chiffre clé, alerte, événement).
+   - Vert / rouge = uniquement gain / perte (toujours doublés d'un signe + ou −).
+   - IBM Plex Sans Condensed (interface) + IBM Plex Mono (toutes les données).
+   ===================================================================== */
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/IBMPlexSansCondensed-400.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/IBMPlexSansCondensed-500.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/IBMPlexSansCondensed-600.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:700;font-style:normal;font-display:swap;src:url(fonts/IBMPlexSansCondensed-700.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/IBMPlexMono-400.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/IBMPlexMono-500.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/IBMPlexMono-600.woff2) format("woff2")}
+
 :root{
-  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2a3342; --text:#e6edf3; --muted:#8b98a9;
-  --gold:#f5c542; --gold-d:#b98d12; --green:#3fb950; --yellow:#e3b341; --orange:#f0883e; --red:#f85149; --blue:#58a6ff;
-  --r:10px;
+  /* surfaces */
+  --bg:#090B0E; --s1:#0E1115; --s2:#131820; --s3:#19202A;
+  --ln:#1D242D; --ln2:#2A323D;
+  /* texte */
+  --t1:#E4E8ED; --t2:#A0AAB6; --t3:#7D8794;
+  /* marque & signal */
+  --ice:#8CC3EA; --ice2:#5E9CC6; --ice-bg:rgba(140,195,234,.09);
+  --amb:#E5A13B; --amb-bg:rgba(229,161,59,.08);
+  /* gain / perte / échelle de risque */
+  --pos:#2EBE87; --neg:#EE5A5A; --org:#E27A3F; --yel:#D8B34A;
+  --fs:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --fm:"IBM Plex Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  --r:3px;
+  /* alias conservés pour le code existant */
+  --panel:var(--s1); --panel2:var(--s2); --line:var(--ln); --text:var(--t1); --muted:var(--t2);
+  --gold:var(--amb); --gold-d:#8A5F1C; --green:var(--pos); --red:var(--neg); --orange:var(--org); --yellow:var(--yel); --blue:var(--ice);
 }
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-a{color:var(--blue)}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent}
+html{scroll-behavior:smooth;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--t1);font:13px/1.45 var(--fs);-webkit-font-smoothing:antialiased}
+a{color:var(--ice);text-decoration:none}
+a:hover{text-decoration:underline}
 button,input,select{font:inherit;color:inherit}
-.wrap{max-width:1280px;margin:0 auto;padding:0 16px 60px}
-
-/* header */
-header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:18px 0 12px}
-h1{margin:0;font-size:22px;letter-spacing:.2px}
-h1 span{color:var(--gold)}
-.sub{color:var(--muted);font-size:13px}
+:focus-visible{outline:1px solid var(--ice);outline-offset:1px}
+b,strong{font-weight:600}
+.mono{font-family:var(--fm);font-size:.94em}
 .spacer{flex:1}
-.status{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.dot.live{background:var(--green);box-shadow:0 0 0 0 rgba(63,185,80,.6);animation:pulse 2s infinite}
-.dot.err{background:var(--red)}
-@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(63,185,80,0)}100%{box-shadow:0 0 0 0 rgba(63,185,80,0)}}
-.btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
-.btn:hover{border-color:var(--gold-d)}
-.btn.gold{background:var(--gold);color:#241b00;border-color:var(--gold);font-weight:600}
+.ic{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ic.w{width:13px;height:13px;color:var(--amb);vertical-align:-2px}
 
-/* controls */
-.controls{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:14px}
-.budget-row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
-.field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.field label{font-size:12px;color:var(--muted)}
-.field .hint{font-size:11.5px;color:var(--muted)}
-input[type=text],input[type=search],select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
-input:focus,select:focus{outline:2px solid var(--gold-d);outline-offset:0}
-#budget{font-size:20px;font-weight:600;width:230px;color:var(--gold)}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12.5px;color:var(--muted)}
-.chip:hover,.chip.on{border-color:var(--gold);color:var(--gold)}
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-input[type=range]{width:100%;accent-color:var(--gold)}
-.tog{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
-
-/* tabs */
-.tabs{display:flex;gap:4px;margin:20px 0 14px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex:0 0 auto;white-space:nowrap;background:none;border:0;border-bottom:2px solid transparent;padding:9px 16px;color:var(--muted);cursor:pointer;font-weight:600}
-.tab.on{color:var(--gold);border-color:var(--gold)}
+/* ---------- structure ---------- */
+.app{display:grid;grid-template-columns:196px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--s1);border-right:1px solid var(--ln);z-index:30}
+.brand{display:flex;align-items:center;gap:10px;padding:14px 16px 13px;border-bottom:1px solid var(--ln);color:var(--t1)}
+.brand:hover{text-decoration:none}
+.brand-mark{width:30px;height:30px;flex:none}
+.brand-txt b{display:block;font-weight:700;letter-spacing:.15em;font-size:13px;line-height:1.1}
+.brand-txt i{font-style:normal;color:var(--ice)}
+.brand-txt small{display:block;margin-top:4px;font:500 9px var(--fm);letter-spacing:.14em;color:var(--t3)}
+.tabs{display:flex;flex-direction:column;padding:8px 0;overflow-y:auto}
+.tab{position:relative;display:flex;align-items:center;gap:10px;width:100%;padding:9px 16px;background:none;border:0;border-left:2px solid transparent;color:var(--t2);cursor:pointer;font-size:13px;font-weight:500;text-align:left;white-space:nowrap}
+.tab:hover{color:var(--t1);background:var(--s2)}
+.tab.on{color:var(--t1);background:var(--s2);border-left-color:var(--ice)}
+.tab.on .ic{color:var(--ice)}
+.badge{margin-left:auto;font:600 10.5px var(--fm);font-style:normal;min-width:18px;padding:0 5px;text-align:center;color:var(--ice);border:1px solid var(--ice2)}
+.badge:empty{display:none}
+#trackBadge{color:var(--amb);border-color:var(--amb)}
+.rail-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--ln);font:400 10.5px/1.5 var(--fm);color:var(--t3)}
+.rail-foot a{color:var(--t2)}
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:6px;height:44px;padding:0 12px 0 0;background:var(--bg);border-bottom:1px solid var(--ln)}
+.topbrand{display:none;align-items:center;gap:8px;padding:0 12px}
+.topbrand .brand-mark{width:24px;height:24px}
+.content{padding:16px;min-width:0}
 .pane{display:none}.pane.on{display:block}
+.pane-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;margin:0 0 12px}
+.pane-h h2{margin:0;font-size:15px;font-weight:600;letter-spacing:.02em}
+.pane-h .sub{color:var(--t3);font-size:12px}
 
-/* hero */
-.hero{background:linear-gradient(135deg,#221c0a,var(--panel) 55%);border:1px solid var(--gold-d);border-radius:var(--r);padding:16px 18px;margin-bottom:16px}
-.hero h2{margin:0 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--gold)}
-.hero .name{font-size:22px;font-weight:700}
-.hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
-.kpi{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
-.kpi b{display:block;font-size:17px}
-.kpi span{font-size:11.5px;color:var(--muted)}
-.hero .go{margin-top:12px}
+/* ---------- ticker (événements) & statut ---------- */
+.topbar .spacer{display:none}
+.evstrip{flex:1 1 0;display:flex;align-items:stretch;height:100%;min-width:0;overflow-x:auto;scrollbar-width:none;font:500 11.5px var(--fm)}
+.topbar>*:not(.evstrip){flex:none}
+.evstrip::-webkit-scrollbar{display:none}
+.evlabel{display:flex;align-items:center;padding:0 12px;color:var(--t3);letter-spacing:.12em;font-size:10px;font-weight:600;text-transform:uppercase;white-space:nowrap}
+.evchip{flex:none;display:inline-flex;align-items:center;gap:7px;padding:0 13px;border-left:1px solid var(--ln);color:var(--t2);white-space:nowrap}
+.evchip:hover{color:var(--t1);text-decoration:none;background:var(--s1)}
+.evchip b{color:var(--ice);font-weight:500}
+.evchip.live b{color:var(--amb)}
+.evchip.live{box-shadow:inset 0 -2px 0 var(--amb)}
+.evc{font:600 9.5px var(--fm);letter-spacing:.06em;padding:1px 4px;border:1px solid var(--ln2);color:var(--t2)}
+.status{display:flex;align-items:center;gap:8px;padding:0 8px;font:400 11.5px var(--fm);color:var(--t2);white-space:nowrap}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--t3)}
+.dot.live{background:var(--pos);animation:blink 2.4s ease-in-out infinite}
+.dot.err{background:var(--neg)}
+@keyframes blink{50%{opacity:.35}}
 
-/* table */
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
-table{width:100%;border-collapse:collapse;min-width:980px}
-th,td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
-th{position:sticky;top:0;background:var(--panel2);font-size:12px;color:var(--muted);font-weight:600;user-select:none}
+/* ---------- boutons ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;background:var(--s2);border:1px solid var(--ln2);border-radius:var(--r);cursor:pointer;color:var(--t1);font-size:12.5px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--ice2)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--t2)}
+.btn.ghost:hover{color:var(--t1);border-color:var(--ln2)}
+.btn.gold{background:var(--ice);color:#06131C;border-color:var(--ice);font-weight:600}
+.btn.gold:hover{filter:brightness(1.1)}
+.btn.sm{height:22px;padding:0 7px;font-size:12px}
+
+/* ---------- ticket (paramètres) ---------- */
+.ticket{display:grid;grid-template-columns:minmax(280px,1.05fr) 3fr;gap:1px;background:var(--ln);border-bottom:1px solid var(--ln)}
+.tk-cap,.tk-grid{background:var(--s1);padding:10px 16px}
+.tk-cap{display:grid;gap:6px;align-content:center}
+.tk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px;align-content:center}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.tk-cap>label{font:600 10px var(--fs);letter-spacing:.11em;text-transform:uppercase;color:var(--t3)}
+.field label b{color:var(--t1);font-family:var(--fm);font-weight:500;letter-spacing:0;text-transform:none}
+.hint{font:400 11px var(--fm);color:var(--t3)}
+input[type=text],input[type=search],select{background:var(--bg);border:1px solid var(--ln2);border-radius:var(--r);height:28px;padding:0 9px;min-width:0;font:500 12.5px var(--fm)}
+select{padding-right:4px}
+input:focus,select:focus{outline:none;border-color:var(--ice)}
+input::placeholder{color:var(--t3)}
+.tk-cap-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#budget{width:170px;height:36px;font:600 20px var(--fm);letter-spacing:.01em;color:var(--t1);padding:0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{background:none;border:1px solid var(--ln2);border-radius:2px;padding:2px 8px;cursor:pointer;font:500 11.5px var(--fm);color:var(--t2)}
+.chip:hover{color:var(--t1);border-color:var(--t3)}
+.chip.on{color:var(--ice);border-color:var(--ice)}
+input[type=range]{width:100%;accent-color:var(--ice);height:28px;margin:0}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+
+/* ---------- bande marché & meilleur choix ---------- */
+.mkt{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));border-top:1px solid var(--ln);border-left:1px solid var(--ln);margin-bottom:12px}
+.mkt>div{background:var(--s1);padding:8px 12px;border-right:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.mkt span,.kpi span{display:block;font:600 9.5px/1.3 var(--fs);letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.mkt b{display:block;margin-top:2px;font:500 15px var(--fm)}
+.hero{display:grid;gap:10px;background:var(--s1);border:1px solid var(--ln);border-left:2px solid var(--amb);padding:12px 14px;margin:0 0 12px}
+.hero h2{margin:0;font:600 10px var(--fs);letter-spacing:.14em;text-transform:uppercase;color:var(--amb)}
+.hero .name{font-size:19px;font-weight:600;line-height:1.2}
+.hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));border-top:1px solid var(--ln);border-left:1px solid var(--ln);margin:0}
+.kpi{background:var(--s1);padding:8px 10px;border-right:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.kpi b{display:block;margin-top:2px;font:500 15px var(--fm)}
+.hero .go{justify-self:start;margin-top:2px}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 8px;font:500 11px var(--fm);color:var(--t3)}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;background:var(--c)}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--ln);background:var(--s1)}
+table{width:100%;border-collapse:collapse;min-width:980px;font:400 12px var(--fm);font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--ln)}
+th{position:sticky;top:0;background:var(--s2);font:600 10px var(--fs);letter-spacing:.1em;text-transform:uppercase;color:var(--t3);user-select:none}
 th[data-sort]{cursor:pointer}
-th[data-sort]:hover{color:var(--gold)}
-th.sorted{color:var(--gold)}
+th[data-sort]:hover,th.sorted{color:var(--ice)}
+th.sorted::after{content:"";display:inline-block;margin-left:5px;border:3px solid transparent;border-top:4px solid currentColor;border-bottom:0;vertical-align:middle}
+th.sorted.asc::after{border-top:0;border-bottom:4px solid currentColor}
 th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+td:nth-child(2){font-family:var(--fs);font-size:13px}
 tbody tr{cursor:pointer}
-tbody tr:hover{background:var(--panel2)}
+tbody tr:hover{background:var(--s2)}
 tr:last-child td{border-bottom:0}
-.rank{color:var(--muted);width:32px}
-.iname{font-weight:600}
-.iid{font-size:11px;color:var(--muted)}
-.pos{color:var(--green)}.neg{color:var(--red)}.mut{color:var(--muted)}
-.gold{color:var(--gold)}
+.rank{width:34px;color:var(--t3)}
+.iname{display:flex;align-items:center;font:600 13px var(--fs)}
+.iid{font:400 10.5px var(--fm);color:var(--t3);margin-top:1px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.mut{color:var(--t2)}
+.gold{color:var(--amb)}
+.sellt{color:var(--ice);font-weight:500}
+.empty{padding:36px 16px;text-align:center;color:var(--t2);font-family:var(--fs)}
+.note{color:var(--t3);font-size:12px;margin:8px 2px}
 
-/* risk badge */
-.risk{display:inline-flex;align-items:center;gap:8px;min-width:118px;justify-content:flex-end}
-.rbar{width:46px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+/* échelle de risque */
+.risk{display:inline-flex;align-items:center;gap:8px;min-width:108px;justify-content:flex-end}
+.rbar{width:36px;height:4px;background:var(--ln2)}
 .rbar i{display:block;height:100%}
-.rl{font-size:12px;font-weight:700}
-.c-g{color:var(--green)}.c-y{color:var(--yellow)}.c-o{color:var(--orange)}.c-r{color:var(--red)}
-.b-g{background:var(--green)}.b-y{background:var(--yellow)}.b-o{background:var(--orange)}.b-r{background:var(--red)}
+.rl{font:600 11px var(--fm)}
+.c-g{color:var(--pos)}.c-y{color:var(--yel)}.c-o{color:var(--org)}.c-r{color:var(--neg)}
+.b-g{background:var(--pos)}.b-y{background:var(--yel)}.b-o{background:var(--org)}.b-r{background:var(--neg)}
 
-.empty{padding:40px 16px;text-align:center;color:var(--muted)}
-.note{color:var(--muted);font-size:12.5px;margin:10px 2px}
-
-/* dialog */
-dialog{background:var(--panel);color:var(--text);border:1px solid var(--gold-d);border-radius:14px;padding:0;width:min(760px,94vw);max-height:90vh}
-dialog::backdrop{background:rgba(0,0,0,.65)}
-.dhead{display:flex;align-items:start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}
-.dbody{padding:16px 18px;display:grid;gap:18px}
-.dbody h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--gold)}
+/* ---------- panneau latéral (fiche d'un item) ---------- */
+dialog{background:var(--s1);color:var(--t1);border:0;padding:0}
+dialog::backdrop{background:rgba(3,5,7,.62)}
+#dlg{position:fixed;inset:0 0 0 auto;margin:0;width:min(660px,100vw);height:100vh;max-height:100vh;border-left:1px solid var(--ln2);overflow-y:auto;overflow-x:hidden}
+#dlg[open]{animation:drawer .16s ease-out}
+@keyframes drawer{from{transform:translateX(22px);opacity:0}to{transform:none;opacity:1}}
+.dhead{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ln);position:sticky;top:0;background:var(--s1);z-index:2}
+.dbody{padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.dbody>*{min-width:0}
+.dbody h3{margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--ln);font:600 10px var(--fs);letter-spacing:.13em;text-transform:uppercase;color:var(--t3)}
 .steps{margin:0;padding-left:20px;display:grid;gap:8px}
-.steps code,.mono{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.steps code,.mono{background:var(--bg);border:1px solid var(--ln);border-radius:2px;padding:0 5px;font-family:var(--fm)}
 .parts{display:grid;gap:8px}
-.part{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;font-size:13px}
-.part .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.part{display:grid;grid-template-columns:150px 1fr 34px;gap:10px;align-items:center;font-size:12.5px}
+.part .bar{height:4px;background:var(--ln2)}
 .part .bar i{display:block;height:100%}
-.reasons{margin:8px 0 0;padding-left:18px;color:var(--text)}
+.part b{font-family:var(--fm);text-align:right}
+.reasons{margin:8px 0 0;padding-left:18px}
 .reasons li{margin:3px 0}
 .books{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.books table{min-width:0;font-size:12.5px}
+.books table{min-width:0;font-size:12px}
 .books th,.books td{padding:4px 8px}
 .books th:first-child,.books td:first-child{text-align:left}
-@media(max-width:640px){.books{grid-template-columns:1fr}.part{grid-template-columns:110px 1fr 34px}}
-
-/* cartes sur mobile */
-@media(max-width:720px){
-  .tablewrap{overflow:visible;border:0;background:none}
-  table.cardable{min-width:0!important}
-  table.cardable thead{display:none}
-  table.cardable tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;padding:12px 14px}
-  table.cardable td{display:block;border:0;padding:0;text-align:left!important;white-space:normal}
-  table.cardable td.rank{display:none}
-  table.cardable td:nth-child(2){grid-column:1/-1;font-size:15px}
-  table.cardable td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted);font-weight:400}
-  table.cardable td:last-child{grid-column:1/-1}
-  table.cardable td.empty{grid-column:1/-1}
-  table.cardable .risk{justify-content:flex-start}
-}
-
-/* flips PNJ */
-.npch{margin:0 0 8px;font-size:15px;color:var(--gold)}
-
-/* favoris */
-.star{background:none;border:0;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:0 6px 0 0;vertical-align:middle}
-.star:hover{color:var(--gold)}
-.star.on{color:var(--gold)}
-.favres{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
-.favres:last-child{border-bottom:0}
-
-/* suivi */
-.posn.warn{border-color:var(--orange)}
-.posn.bad{border-color:var(--red)}
-.advice{font-size:13.5px;font-weight:600;margin:4px 0}
+.books td:nth-child(2){font-family:var(--fm);font-size:12px}
+#fdlg{width:min(400px,92vw);margin:auto;border:1px solid var(--ln2);border-radius:var(--r)}
+.fform{padding:16px}
+.fform h3{margin:0 0 10px;font-size:14px;font-weight:600}
+.fform label{display:grid;gap:6px;font-size:12px;color:var(--t2)}
+.fform input{height:36px;font:600 18px var(--fm);color:var(--t1)}
 .frow{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:12px}
-#fdlg{width:min(420px,92vw)}
-.fform{padding:16px 18px}
-.fform h3{margin:0 0 10px;color:var(--gold);font-size:16px}
-.fform label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
-.fform input{font-size:18px;color:var(--gold);font-weight:600}
-.trackbtn{margin-top:12px}
 
-/* historique */
-.chartwrap{position:relative}
-.chartwrap svg{width:100%;height:auto;display:block;background:var(--bg);border:1px solid var(--line);border-radius:8px;touch-action:pan-y}
-.ctip{display:none;position:absolute;top:8px;left:0;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;pointer-events:none;white-space:nowrap;z-index:2}
-.leg{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:0 0 6px}
-.sw{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
-.hscroll{overflow-x:auto}
-.hour{min-width:640px;font-size:12px}
-.hour th,.hour td{padding:5px 4px;text-align:center;border-bottom:1px solid var(--line);position:static;background:none;white-space:nowrap}
-.hour th:first-child{text-align:left;white-space:normal;min-width:170px;color:var(--text);font-weight:500}
-.hour td:nth-child(2),.hour th:nth-child(2){text-align:center}
-.hour td.best{outline:2px solid var(--gold);outline-offset:-2px;font-weight:700}
-.hour td.now,.hour th.now{text-decoration:underline}
-
-/* calendrier */
-.evstrip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:13px}
-.evchip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 11px;color:var(--text);text-decoration:none}
-.evchip:hover{border-color:var(--gold)}
-.evchip.live{border-color:var(--orange)}
-.evgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
-.evcard.live{border-color:var(--orange)}
-.evhead{display:flex;align-items:center;gap:12px}
-.evicon{font-size:28px}
-.evstatus{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;white-space:nowrap;color:var(--gold)}
-.evstatus.live{color:var(--orange);border-color:var(--orange)}
-.evline{margin:8px 0 12px}
-.sellt{color:var(--blue);font-weight:600}
-
-/* guide */
-.guide{display:grid;gap:14px;max-width:900px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
-.card h3{margin:0 0 8px;font-size:16px;color:var(--gold)}
+/* ---------- cartes / textes ---------- */
+.card{background:var(--s1);border:1px solid var(--ln);border-radius:var(--r);padding:14px 16px}
+.card h3{margin:0 0 8px;font-size:13.5px;font-weight:600}
 .card p{margin:6px 0}
 .card ul{margin:6px 0;padding-left:20px}
 .card li{margin:4px 0}
-.gtable{width:100%;min-width:0;font-size:13px}
+.warn{border-left:2px solid var(--amb);padding:7px 12px;background:var(--amb-bg);margin:8px 0}
+.tip{border-left:2px solid var(--ice2);padding:7px 12px;background:var(--ice-bg);margin:8px 0}
+.gtable{width:100%;min-width:0;font:400 12.5px var(--fs)}
 .gtable th,.gtable td{text-align:left;white-space:normal;padding:6px 8px}
-.warn{border-left:3px solid var(--orange);padding:6px 12px;background:rgba(240,136,62,.08);border-radius:0 6px 6px 0;margin:8px 0}
-.tip{border-left:3px solid var(--green);padding:6px 12px;background:rgba(63,185,80,.08);border-radius:0 6px 6px 0;margin:8px 0}
-.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:0 2px 10px;align-items:center}
-.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--c)}
+.gtable td:nth-child(2){font-size:12.5px}
+.guide{display:grid;gap:12px;max-width:920px}
+.guide .card h3{display:flex;align-items:center;gap:8px}
+.guide .card h3::before{content:"";width:7px;height:7px;background:var(--ice);flex:none}
+
+/* ---------- favoris, suivi, PNJ ---------- */
+.star{background:none;border:0;cursor:pointer;color:var(--t3);padding:0 7px 0 0;line-height:0;vertical-align:middle}
+.star .ic{width:15px;height:15px}
+.star:hover{color:var(--amb)}
+.star.on{color:var(--amb)}
+.star.on .ic{fill:currentColor}
+.favres{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--ln)}
+.favres:last-child{border-bottom:0}
+.spark{width:74px;height:22px;display:block;margin-left:auto}
+.posn.warn{border-color:var(--amb)}
+.posn.bad{border-color:var(--neg)}
+.advice{font-size:13px;font-weight:600;margin:4px 0}
+.npch{margin:0 0 8px;font:600 10px var(--fs);letter-spacing:.13em;text-transform:uppercase;color:var(--t3)}
+.npch .mut{letter-spacing:0;text-transform:none;font-weight:400;font-size:12px}
+.trackbtn{margin-top:12px}
+
+/* ---------- historique / graphiques ---------- */
+.chartwrap{position:relative}
+.chartwrap svg{width:100%;height:auto;display:block;background:var(--bg);border:1px solid var(--ln);touch-action:pan-y}
+.ctip{display:none;position:absolute;top:8px;left:0;background:var(--s3);border:1px solid var(--ln2);padding:4px 8px;font:400 11.5px var(--fm);pointer-events:none;white-space:nowrap;z-index:2}
+.leg{display:flex;flex-wrap:wrap;gap:14px;font:400 11.5px var(--fm);color:var(--t2);margin:0 0 6px}
+.sw{display:inline-block;width:14px;height:2px;margin-right:6px;vertical-align:middle}
+.hscroll{overflow-x:auto}
+.hour{min-width:640px;font-size:11.5px}
+.hour th,.hour td{padding:5px 4px;text-align:center;border-bottom:1px solid var(--ln);position:static;background:none;white-space:nowrap}
+.hour th:first-child{text-align:left;white-space:normal;min-width:170px;color:var(--t1);font:500 12px var(--fs);letter-spacing:0;text-transform:none}
+.hour td:nth-child(2),.hour th:nth-child(2){text-align:center;font-family:var(--fm);font-size:11.5px}
+.hour td.best{outline:1px solid var(--amb);outline-offset:-1px;font-weight:600}
+.hour td.now,.hour th.now{text-decoration:underline}
+
+/* ---------- calendrier ---------- */
+.evgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.evcard.live{border-color:var(--amb)}
+.evhead{display:flex;align-items:center;gap:12px}
+.evicon{display:grid;place-items:center;width:40px;height:40px;flex:none;font:600 11px var(--fm);letter-spacing:.06em;color:var(--ice);border:1px solid var(--ln2)}
+.evcard.live .evicon{color:var(--amb);border-color:var(--amb)}
+.evstatus{font:600 11.5px var(--fm);padding:3px 8px;white-space:nowrap;color:var(--ice);border:1px solid var(--ln2)}
+.evstatus.live{color:var(--amb);border-color:var(--amb)}
+.evline{margin:8px 0 12px}
+
+/* ---------- adaptation ---------- */
+@media(max-width:1100px){
+  .btn.ghost span{display:none}
+  .app{grid-template-columns:56px minmax(0,1fr)}
+  .brand{justify-content:center;padding:14px 0}
+  .brand-txt,.rail-foot,.tab span{display:none}
+  .tab{justify-content:center;padding:12px 0}
+  .tab .badge{position:absolute;top:3px;right:3px;min-width:15px;padding:0 3px;font-size:9.5px}
+  .ticket{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;inset:auto 0 0 0;top:auto;height:58px;flex-direction:row;border-right:0;border-top:1px solid var(--ln)}
+  .rail .brand{display:none}
+  .tabs{flex-direction:row;padding:0;width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .tab{flex:1 0 62px;flex-direction:column;justify-content:center;gap:3px;padding:6px 4px;border-left:0;border-top:2px solid transparent}
+  .tab span{display:block;font-size:10px}
+  .tab.on{border-left-color:transparent;border-top-color:var(--ice)}
+  .content{padding:12px 12px 78px}
+  .topbrand{display:flex}
+  .topbar{padding-right:6px}
+  .btn.ghost span{display:none}
+  .status #statusTxt{max-width:34vw;overflow:hidden;text-overflow:ellipsis}
+  .evlabel{display:none}
+  #budget{width:150px}
+  #dlg{width:100vw}
+  .books{grid-template-columns:1fr}
+  .part{grid-template-columns:104px 1fr 30px}
+  /* tableaux : une fiche par ligne */
+  .tablewrap{overflow:visible;border:0;background:none}
+  table.cardable{min-width:0!important}
+  table.cardable thead{display:none}
+  table.cardable tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;background:var(--s1);border:1px solid var(--ln);margin-bottom:8px;padding:10px 12px}
+  table.cardable td{display:block;border:0;padding:0;text-align:left!important;white-space:normal}
+  table.cardable td.rank{display:none}
+  table.cardable td:nth-child(2){grid-column:1/-1}
+  table.cardable td[data-l]::before{content:attr(data-l);display:block;font:600 9.5px var(--fs);letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:1px}
+  table.cardable td:last-child{grid-column:1/-1}
+  table.cardable td.empty{grid-column:1/-1}
+  table.cardable .risk{justify-content:flex-start}
+  table.cardable .spark{margin-left:0}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- marque : tête de loup facettée, crête en W -->
+    <symbol id="logo" viewBox="0 0 32 32">
+      <path d="M3.5 1.5 L11.6 9.6 L16 6.2 L16 31 L9.6 25 L8.4 20.2 L1.6 19.2 L4.6 13.4 Z" fill="#6FA8D3"/>
+      <path d="M28.5 1.5 L20.4 9.6 L16 6.2 L16 31 L22.4 25 L23.6 20.2 L30.4 19.2 L27.4 13.4 Z" fill="#9CCBEE"/>
+      <path d="M9 14.6 L13.7 16.6 L12.9 18.3 L9 16.4 Z" fill="#E5A13B"/>
+      <path d="M23 14.6 L18.3 16.6 L19.1 18.3 L23 16.4 Z" fill="#E5A13B"/>
+      <path d="M14.3 26.4 L17.7 26.4 L16 28.9 Z" fill="#0B0E12"/>
+    </symbol>
+    <symbol id="i-flips" viewBox="0 0 24 24"><path d="M3 17l5.5-5.5 4 4L21 7"/><path d="M15 7h6v6"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.7 5.5 6 .9-4.35 4.2 1 6-5.35-2.85L6.65 20.1l1-6L3.3 9.9l6-.9z"/></symbol>
+    <symbol id="i-plan" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7.5" height="7.5"/><rect x="13" y="3.5" width="7.5" height="4.5"/><rect x="13" y="10" width="7.5" height="10.5"/><rect x="3.5" y="13" width="7.5" height="7.5"/></symbol>
+    <symbol id="i-npc" viewBox="0 0 24 24"><path d="M3.5 12V3.5H12l8.5 8.5-8.5 8.5z"/><circle cx="7.5" cy="7.5" r="1.1"/></symbol>
+    <symbol id="i-track" viewBox="0 0 24 24"><path d="M4 6h16M4 12h9M4 18h6"/><path d="M15 17.5l2.2 2.2L21 15"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-guide" viewBox="0 0 24 24"><path d="M4 5h6.5a1.5 1.5 0 011.5 1.5V20a1.5 1.5 0 00-1.5-1.5H4z"/><path d="M20 5h-6.5A1.5 1.5 0 0012 6.5V20a1.5 1.5 0 011.5-1.5H20z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 10-2.4 5.7"/><path d="M20 4.5V11h-6.5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.2"/></symbol>
+  </defs>
+</svg>
 
-<header>
-  <div>
-    <h1>🐺 Wolf of <span>Sky</span> — Bazaar Flipper</h1>
-    <div class="sub">Trouve le meilleur flip pour ton budget, avec le niveau de risque.</div>
-  </div>
+<div class="app">
+
+<aside class="rail">
+  <a class="brand" href="./" aria-label="Wolf of Sky — accueil">
+    <svg class="brand-mark" aria-hidden="true"><use href="#logo"/></svg>
+    <span class="brand-txt"><b>WOLF <i>OF</i> SKY</b><small>BAZAAR TERMINAL</small></span>
+  </a>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab on" data-tab="flips" title="Flips" aria-label="Flips"><svg class="ic" aria-hidden="true"><use href="#i-flips"/></svg><span>Flips</span></button>
+    <button class="tab" data-tab="fav" title="Favoris" aria-label="Favoris"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><span>Favoris</span><em id="favBadge" class="badge"></em></button>
+    <button class="tab" data-tab="plan" title="Répartition" aria-label="Répartition"><svg class="ic" aria-hidden="true"><use href="#i-plan"/></svg><span>Répartition</span></button>
+    <button class="tab" data-tab="npc" title="Flips PNJ" aria-label="Flips PNJ"><svg class="ic" aria-hidden="true"><use href="#i-npc"/></svg><span>Flips PNJ</span></button>
+    <button class="tab" data-tab="track" title="Mon suivi" aria-label="Mon suivi"><svg class="ic" aria-hidden="true"><use href="#i-track"/></svg><span>Mon suivi</span><em id="trackBadge" class="badge"></em></button>
+    <button class="tab" data-tab="calendar" title="Calendrier" aria-label="Calendrier"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg><span>Calendrier</span></button>
+    <button class="tab" data-tab="guide" title="Guide" aria-label="Guide"><svg class="ic" aria-hidden="true"><use href="#i-guide"/></svg><span>Guide</span></button>
+  </nav>
+  <div class="rail-foot">Données Hypixel<br>Historique Coflnet<br><a href="brand.html">Charte graphique</a><br><a href="https://github.com/valentinloyal/wolf-of-sky" target="_blank" rel="noopener">Code source</a></div>
+</aside>
+
+<div class="main">
+
+<header class="topbar">
+  <span class="topbrand"><svg class="brand-mark" aria-hidden="true"><use href="#logo"/></svg></span>
+  <div class="evstrip" id="evStrip"></div>
   <div class="spacer"></div>
   <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusTxt">Chargement…</span></div>
-  <button class="btn" id="shareLink" title="Copier un lien qui reprend tes réglages (budget, risque…)">🔗 Partager</button>
-  <button class="btn" id="refresh" title="Recharger les prix maintenant">↻ Actualiser</button>
+  <button class="btn ghost" id="shareLink" title="Copier un lien qui reprend tes réglages (budget, risque…)"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg><span>Partager</span></button>
+  <button class="btn ghost" id="refresh" title="Recharger les prix maintenant"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span>Actualiser</span></button>
 </header>
 
-<section class="controls">
-  <div class="budget-row">
-    <div class="field">
-      <label for="budget">💰 Ton argent disponible (coins)</label>
-      <input id="budget" type="text" inputmode="text" autocomplete="off" placeholder="ex : 5m, 250k, 1.2b">
+<section class="ticket">
+  <div class="tk-cap">
+    <label for="budget">Capital (coins)</label>
+    <div class="tk-cap-row">
+      <input id="budget" type="text" inputmode="text" autocomplete="off" placeholder="5m, 250k, 1.2b">
       <span class="hint" id="budgetHint"></span>
     </div>
     <div class="chips" id="chips"></div>
   </div>
-  <div class="opts">
+  <div class="tk-grid">
     <div class="field">
-      <label for="maxRisk">Risque maximum accepté : <b id="maxRiskV"></b></label>
+      <label for="maxRisk">Risque max <b id="maxRiskV"></b></label>
       <input id="maxRisk" type="range" min="10" max="100" step="5">
     </div>
     <div class="field">
-      <label for="cycleH">Durée visée d'un cycle</label>
+      <label for="cycleH">Durée d'un cycle</label>
       <select id="cycleH">
-        <option value="0.5">30 min (rapide)</option>
+        <option value="0.5">30 min</option>
         <option value="1">1 heure</option>
         <option value="2">2 heures</option>
         <option value="4">4 heures</option>
       </select>
     </div>
     <div class="field">
-      <label for="share">Part du marché que tu captes</label>
+      <label for="share">Part de marché captée</label>
       <select id="share">
-        <option value="0.1">10 % (très prudent)</option>
-        <option value="0.2">20 % (réaliste)</option>
-        <option value="0.35">35 % (optimiste)</option>
-        <option value="0.5">50 % (très optimiste)</option>
+        <option value="0.1">10 % · prudent</option>
+        <option value="0.2">20 % · réaliste</option>
+        <option value="0.35">35 % · optimiste</option>
+        <option value="0.5">50 % · très optimiste</option>
       </select>
     </div>
     <div class="field">
       <label for="tax">Taxe Bazaar</label>
       <select id="tax">
-        <option value="0.0125">1,25 % (par défaut)</option>
-        <option value="0.01125">1,125 % (amélioration niv.1)</option>
-        <option value="0.01">1 % (amélioration max)</option>
+        <option value="0.0125">1,25 % · défaut</option>
+        <option value="0.01125">1,125 % · niv. 1</option>
+        <option value="0.01">1 % · niv. max</option>
       </select>
     </div>
     <div class="field">
-      <label for="minVol">Volume min. (unités/heure)</label>
+      <label for="minVol">Volume min. /h</label>
       <select id="minVol">
         <option value="5">5</option><option value="20">20</option><option value="50">50</option>
         <option value="150">150</option><option value="500">500</option><option value="2000">2 000</option>
       </select>
     </div>
     <div class="field">
-      <label for="q">Rechercher un item</label>
-      <input id="q" type="search" placeholder="ex : dragon, enchanted…">
+      <label for="q">Recherche</label>
+      <input id="q" type="search" placeholder="dragon, enchanted…">
     </div>
   </div>
 </section>
 
-<nav class="tabs" role="tablist">
-  <button class="tab on" data-tab="flips">🏆 Meilleurs flips</button>
-  <button class="tab" data-tab="fav">⭐ Favoris <span id="favBadge" class="c-g"></span></button>
-  <button class="tab" data-tab="plan">🧺 Plan de répartition</button>
-  <button class="tab" data-tab="npc">🏪 Flips PNJ</button>
-  <button class="tab" data-tab="track">💼 Mon suivi <span id="trackBadge" class="c-o"></span></button>
-  <button class="tab" data-tab="calendar">📅 Calendrier &amp; events</button>
-  <button class="tab" data-tab="guide">📖 Guide débutant</button>
-</nav>
+<div class="content">
 
 <!-- ===== FLIPS ===== -->
 <section class="pane on" id="pane-flips">
-  <div class="evstrip" id="evStrip"></div>
+  <div class="pane-h"><h2>Meilleurs flips</h2><span class="sub">classés par profit /h ajusté au risque · clic sur une ligne pour ouvrir la fiche</span></div>
+  <div class="mkt" id="mktStrip"></div>
   <div id="hero"></div>
   <div class="legend">
     Risque :
@@ -308,6 +459,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
 <!-- ===== FAVORIS ===== -->
 <section class="pane" id="pane-fav">
+  <div class="pane-h"><h2>Favoris</h2><span class="sub">surveillés même hors filtres de risque, de volume et de budget</span></div>
   <div class="card" style="margin-bottom:14px">
     <label for="favq" class="mut" style="font-size:12px;display:block;margin-bottom:6px">Ajouter un item aux favoris</label>
     <input id="favq" type="search" placeholder="ex : sunset, candy, griffin…" autocomplete="off" style="width:100%;max-width:420px">
@@ -318,6 +470,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
 <!-- ===== PLAN ===== -->
 <section class="pane" id="pane-plan">
+  <div class="pane-h"><h2>Répartition du capital</h2><span class="sub">plusieurs flips plutôt qu'un seul, pour limiter la concentration</span></div>
   <div class="card" style="margin-bottom:14px">
     <p style="margin:0 0 10px">Mettre tout ton argent dans un seul item est risqué et souvent inefficace : le marché ne peut absorber qu'un certain nombre d'unités par heure.
     Ce plan répartit ton budget sur plusieurs flips (meilleur score ajusté au risque d'abord).</p>
@@ -333,9 +486,10 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
 <!-- ===== FLIPS PNJ ===== -->
 <section class="pane" id="pane-npc">
+  <div class="pane-h"><h2>Flips PNJ</h2><span class="sub">achat au Bazaar, revente à prix fixe et sans taxe</span></div>
   <div class="card" style="margin-bottom:14px">
     <p style="margin:0 0 10px">Certains items se <b>revendent plus cher à un PNJ</b> (prix fixe, <b>sans taxe</b>) que ce qu'ils coûtent au Bazaar. Tu les achètes au Bazaar puis tu les vends au PNJ : pas de vente à attendre, donc beaucoup moins de risque qu'un flip classique. Avec ton budget actuel :</p>
-    <div class="warn" style="margin:0 0 12px">⚠️ <b>Plafond quotidien</b> : Hypixel limite les coins qu'on peut gagner en vendant aux PNJ (≈ <b>500M par jour</b> d'après les guides récents, remis à zéro à minuit heure de New York, et <b>plus bas pour les joueurs peu actifs</b>). Vérifie ta propre limite en jeu ; chaque fiche indique combien le flip en consomme.</div>
+    <div class="warn" style="margin:0 0 12px"><b>Plafond quotidien</b> : Hypixel limite les coins qu'on peut gagner en vendant aux PNJ (≈ <b>500M par jour</b> d'après les guides récents, remis à zéro à minuit heure de New York, et <b>plus bas pour les joueurs peu actifs</b>). Vérifie ta propre limite en jeu ; chaque fiche indique combien le flip en consomme.</div>
     <div class="field" style="max-width:260px">
       <label for="npcMin">Gain minimum par flip</label>
       <select id="npcMin"><option value="1000">1 000 coins</option><option value="10000">10 000 coins</option><option value="100000">100 000 coins</option><option value="1000000">1 million</option></select>
@@ -346,16 +500,19 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
 <!-- ===== SUIVI ===== -->
 <section class="pane" id="pane-track">
+  <div class="pane-h"><h2>Mon suivi</h2><span class="sub">tes ordres en cours, comparés au carnet en direct, et ton profit réel</span></div>
   <div id="trackOut"></div>
 </section>
 
 <!-- ===== CALENDRIER ===== -->
 <section class="pane" id="pane-calendar">
+  <div class="pane-h"><h2>Calendrier SkyBlock</h2><span class="sub">événements, maire en poste, effet mesuré sur les prix</span></div>
   <div id="calOut"><p class="note">Chargement…</p></div>
 </section>
 
 <!-- ===== GUIDE ===== -->
 <section class="pane" id="pane-guide">
+  <div class="pane-h"><h2>Guide</h2><span class="sub">comprendre le Bazaar, le flipping et le risque</span></div>
   <div class="guide">
 
     <div class="card">
@@ -421,7 +578,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     </div>
 
     <div class="card">
-      <h3>Flips PNJ (onglet « 🏪 Flips PNJ »)</h3>
+      <h3>Flips PNJ (onglet « Flips PNJ »)</h3>
       <p>Un PNJ rachète certains items à <b>prix fixe et sans taxe</b>. Si ce prix dépasse ce que l'item coûte au Bazaar, tu peux acheter au Bazaar puis revendre au PNJ. Contrairement à un flip normal, <b>il n'y a pas de vente à attendre</b> : le seul aléa est le remplissage de ton ordre d'achat.</p>
       <ul>
         <li><b>Achat instantané</b> : tu prends toutes les offres moins chères que le PNJ. Profit immédiat, mais limité par la profondeur du carnet (et des robots exploitent ces écarts en quelques secondes : c'est souvent vide).</li>
@@ -434,16 +591,16 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
     <div class="card">
       <h3>Suivre tes flips (onglet « Mon suivi »)</h3>
-      <p>Dans la fiche d'un item, clique sur <b>« ➕ Suivre ce flip »</b> après avoir posé tes ordres en jeu. La page compare ensuite ton prix au carnet d'ordres en direct :</p>
+      <p>Dans la fiche d'un item, clique sur <b>« Suivre ce flip »</b> après avoir posé tes ordres en jeu. La page compare ensuite ton prix au carnet d'ordres en direct :</p>
       <ul>
         <li><b>Ordre d'achat dépassé</b> : quelqu'un a posé un ordre plus haut que le tien. La page te donne le prix pour repasser devant et la marge qu'il te resterait (ou te suggère d'annuler si elle devient trop faible).</li>
         <li><b>Offre de vente sous-cotée</b> : quelqu'un vend moins cher que toi. Elle te donne le prix pour repasser devant et le profit net correspondant, ou te prévient si tu perdrais de l'argent.</li>
-        <li>Quand tu as acheté puis vendu, clique sur <b>« ✔ Acheté »</b> / <b>« ✔ Vendu »</b> et entre les vrais prix : l'historique calcule ton <b>profit réel</b> et ton rythme moyen par heure.</li>
+        <li>Quand tu as acheté puis vendu, clique sur <b>« Acheté »</b> / <b>« Vendu »</b> et entre les vrais prix : l'historique calcule ton <b>profit réel</b> et ton rythme moyen par heure.</li>
       </ul>
       <p>Tu peux activer les notifications du navigateur pour être prévenu quand un ordre doit être ajusté (la page doit rester ouverte). Tout est enregistré dans ton navigateur, rien n'est envoyé ailleurs.</p>
       <div class="tip">Les prix d'ordres sont affichés avec <b>1 décimale</b> (ex. 2 250 246,5) : au Bazaar, 0,1 coin suffit pour passer devant, tape le prix exact.</div>
-      <p><b>⭐ Favoris</b> : clique sur l'étoile d'un item (tableau, fiche, ou recherche de l'onglet Favoris) pour le surveiller. L'onglet les affiche <b>même s'ils ne passent pas tes filtres</b> (risque, volume, budget), avec un statut clair : rentable, marge faible, risque élevé, trop cher, pas rentable. Le nombre de favoris rentables est indiqué sur l'onglet, et tu peux être notifié quand l'un d'eux le devient.</p>
-      <p>Le bouton <b>🔗 Partager</b> en haut copie un lien qui reprend tes réglages (budget, risque, durée de cycle…) : pratique pour l'envoyer à un ami.</p>
+      <p><b>Favoris</b> : clique sur l'étoile d'un item (tableau, fiche, ou recherche de l'onglet Favoris) pour le surveiller. L'onglet les affiche <b>même s'ils ne passent pas tes filtres</b> (risque, volume, budget), avec un statut clair : rentable, marge faible, risque élevé, trop cher, pas rentable. Le nombre de favoris rentables est indiqué sur l'onglet, et tu peux être notifié quand l'un d'eux le devient.</p>
+      <p>Le bouton <b>Partager</b> en haut copie un lien qui reprend tes réglages (budget, risque, durée de cycle…) : pratique pour l'envoyer à un ami.</p>
     </div>
 
     <div class="card">
@@ -462,7 +619,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <li><b>Illiquidité</b> : tu achètes mais personne n'achète ta revente → argent bloqué. <i>→ Privilégie les items à gros volume, surtout au début.</i></li>
         <li><b>Concurrence</b> : d'autres joueurs (et bots) te passent devant à 0,1 coin près. <i>→ Vérifie ton rang de temps en temps et ajuste.</i></li>
         <li><b>Données en retard</b> : l'API se met à jour toutes les ~20-60 s. <i>→ Compare toujours avec le prix affiché en jeu avant de valider.</i></li>
-        <li><b>Concentration</b> : tout miser sur un item. <i>→ Utilise l'onglet « Plan de répartition ».</i></li>
+        <li><b>Concentration</b> : tout miser sur un item. <i>→ Utilise l'onglet « Répartition ».</i></li>
       </ul>
       <div class="tip"><b>Règles d'or pour débuter :</b> commence avec un petit montant (10-20 % de ton budget) pour comprendre le rythme ; choisis un risque « Faible » ou « Modéré » ; ne mets jamais plus de ~30-40 % de ton budget sur un seul item ; vérifie le carnet en jeu avant chaque ordre ; réinvestis progressivement tes gains.</div>
     </div>
@@ -488,13 +645,19 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   </div>
 </section>
 
-</div>
+</div><!-- .content -->
+</div><!-- .main -->
+</div><!-- .app -->
 
 <dialog id="dlg"></dialog>
 <dialog id="fdlg"></dialog>
 
 <script>
 "use strict";
+{ // IBM Plex n'a pas l'espace fine insécable (U+202F) que fr-FR utilise pour les milliers : on la remplace par U+00A0
+  const _tls = Number.prototype.toLocaleString;
+  Number.prototype.toLocaleString = function(l, o){ return _tls.call(this, l, o).replace(/\u202f/g, "\u00a0"); };
+}
 /* ============================== CONFIG / STATE ============================== */
 const HYP_URL = "https://api.hypixel.net/skyblock/bazaar";
 const BZ_URL  = "https://api.skyblock.bz/api/flips";
@@ -719,7 +882,7 @@ function computeRisk(b, d){
   const evp = eventProximity(b.id);
   if(evp){
     volat = Math.max(volat, 70);
-    reasons.push(`${evp.ev.icon} ${evp.ev.name} ${evp.live?"en cours ou tout juste terminé":"imminent"} : sur cet item le prix bouge en général de ${signed(evp.r.spike.flag?evp.r.spike.med:evp.r.pre.med)} autour de l'événement. Les prix actuels sont anormaux, ne te fie pas au prix habituel.`);
+    reasons.push(`${evp.ev.name} ${evp.live?"en cours ou tout juste terminé":"imminent"} : sur cet item le prix bouge en général de ${signed(evp.r.spike.flag?evp.r.spike.med:evp.r.pre.med)} autour de l'événement. Les prix actuels sont anormaux, ne te fie pas au prix habituel.`);
   }
   const parts = {manip, liq, fragile, volat};
   const weighted = .30*manip + .25*liq + .20*fragile + .25*volat;
@@ -860,23 +1023,23 @@ function sbDate(t){
 }
 // starts = [mois (0-11), jour] ; days = durée en jours SkyBlock ; seed = items à suivre en priorité ; ctrl = décalage des dates témoins
 const EVENTS = [
-  {key:"spooky",  icon:"🎃", name:"Spooky Festival",       starts:[[7,29]],         days:3,  seed:["GREEN_CANDY","PURPLE_CANDY"], ctrl:SB_YEAR/2,
+  {key:"spooky",  icon:"SPK", name:"Spooky Festival",       starts:[[7,29]],         days:3,  seed:["GREEN_CANDY","PURPLE_CANDY"], ctrl:SB_YEAR/2,
    desc:"Les monstres ont une chance de lâcher des bonbons verts/violets, à échanger auprès du Fear Mongerer pour des récompenses."},
-  {key:"jerry",   icon:"🎄", name:"Season of Jerry",       starts:[[11,24]],        days:3,  seed:["GREEN_GIFT","RED_GIFT","WHITE_GIFT"], ctrl:SB_YEAR/2,
+  {key:"jerry",   icon:"JRY", name:"Season of Jerry",       starts:[[11,24]],        days:3,  seed:["GREEN_GIFT","RED_GIFT","WHITE_GIFT"], ctrl:SB_YEAR/2,
    desc:"Défends l'atelier de Jerry pour gagner des cadeaux."},
-  {key:"newyear", icon:"🎂", name:"New Year Celebration",  starts:[[11,29]],        days:3,  seed:[], ctrl:SB_YEAR/2,
+  {key:"newyear", icon:"NYC", name:"New Year Celebration",  starts:[[11,29]],        days:3,  seed:[], ctrl:SB_YEAR/2,
    desc:"Le Baker offre des gâteaux gratuits."},
-  {key:"zoo",     icon:"🦁", name:"Traveling Zoo",         starts:[[3,1],[9,1]],    days:3,  seed:[], ctrl:SB_YEAR/4,
+  {key:"zoo",     icon:"ZOO", name:"Traveling Zoo",         starts:[[3,1],[9,1]],    days:3,  seed:[], ctrl:SB_YEAR/4,
    desc:"Oringo le zoologue itinérant vient échanger des pets (2 passages par année SkyBlock)."},
-  {key:"election",icon:"🗳️", name:"Ouverture des élections",starts:[[2,27],[5,27]],days:1,  seed:[], ctrl:SB_YEAR/4,
+  {key:"election",icon:"VOT", name:"Ouverture des élections",starts:[[2,27],[5,27]],days:1,  seed:[], ctrl:SB_YEAR/4,
    desc:"Le vote pour le prochain maire s'ouvre (les perks du maire peuvent faire bouger certains prix)."},
   // Un concours démarre tous les 3 jours SkyBlock (= toutes les heures réelles, à hh:15 UTC), 2e jour de l'année, et dure 1 jour SkyBlock (20 min).
   // Vérifié sur les 124 concours de l'année 515 (planning communautaire) : écart constant de 3600 s, décalage de 1200 s après le début d'année.
-  {key:"jacob",   icon:"🧑‍🌾", name:"Jacob's Farming Contest", periodic:{offset:SB_DAY, period:3*SB_DAY}, days:1, seed:[], noStat:true,
+  {key:"jacob",   icon:"JAC", name:"Jacob's Farming Contest", periodic:{offset:SB_DAY, period:3*SB_DAY}, days:1, seed:[], noStat:true,
    desc:"Concours de farming : 3 cultures sont tirées au sort et les meilleurs récoltants gagnent des médailles. Un concours démarre toutes les heures réelles et dure 20 minutes."},
-  {key:"hoppity", icon:"🐰", name:"Hoppity's Hunt",        starts:[[0,1]],          days:93, seed:[], long:true,
+  {key:"hoppity", icon:"HOP", name:"Hoppity's Hunt",        starts:[[0,1]],          days:93, seed:[], long:true,
    desc:"Chasse aux lapins en chocolat pendant tout le printemps SkyBlock."},
-  {key:"harvest", icon:"🌾", name:"Harvest Feast",         starts:[[6,1]],          days:93, seed:[], long:true,
+  {key:"harvest", icon:"HRV", name:"Harvest Feast",         starts:[[6,1]],          days:93, seed:[], long:true,
    desc:"Les cultures de saison donnent des ingrédients spéciaux pendant tout l'automne SkyBlock."}
 ];
 const measurable = ev => !ev.long && !ev.noStat;
@@ -973,9 +1136,9 @@ function effectLines(ev, r){
   return L;
 }
 function effectAdvice(r){
-  if(r.spike.flag && r.spike.diff > 0) return `💡 Le prix grimpe brièvement pendant l'événement : place plutôt une offre de vente avant / pendant l'événement, et évite d'acheter au moment du pic.`;
-  if(r.spike.flag && r.spike.diff < 0) return `💡 Le prix chute pendant l'événement (offre abondante) : attends la fin pour acheter moins cher.`;
-  if(r.pre.flag && r.pre.diff > 0) return `💡 Le prix commence à monter la veille : acheter avant peut être avantageux.`;
+  if(r.spike.flag && r.spike.diff > 0) return `Piste : le prix grimpe brièvement pendant l'événement : place plutôt une offre de vente avant / pendant l'événement, et évite d'acheter au moment du pic.`;
+  if(r.spike.flag && r.spike.diff < 0) return `Piste : le prix chute pendant l'événement (offre abondante) : attends la fin pour acheter moins cher.`;
+  if(r.pre.flag && r.pre.diff > 0) return `Piste : le prix commence à monter la veille : acheter avant peut être avantageux.`;
   return "";
 }
 
@@ -1032,7 +1195,7 @@ function jacobCrops(start){
   return c ? c.crops : null;
 }
 let mayorInfo = null;
-const stripCodes = s => String(s||"").replace(/§./g,"");
+const stripCodes = s => String(s||"").replace(/§./g,"").replace(/[☀-➿]/g,"");   // codes couleur du jeu + symboles absents de la police
 async function loadMayor(){
   try{
     const r = await fetch("https://api.hypixel.net/v2/resources/skyblock/election", {cache:"no-store"});
@@ -1045,9 +1208,9 @@ function renderStrip(){
   const now = Date.now();
   const list = EVENTS.filter(measurable).map(ev=>({ev, ...evNext(ev, now)})).sort((a,b)=>(b.live-a.live)||(a.start-b.start)).slice(0,3);
   const jev = EVENTS.find(e=>e.key==="jacob"), jn = evNext(jev, now), jc = jacobCrops(jn.start);
-  const jchip = `<a href="#" data-gocal="1" class="evchip ${jn.live?"live":""}">${jev.icon} Jacob <b class="cd" data-t="${jn.live?jn.end:jn.start}" data-live="${jn.live?1:0}">${jn.live?"en cours":"dans "+fmtCountdown(jn.start-now)}</b>${jc?` <span class="mut">· ${jc.map(esc).join(", ")}</span>`:""}</a>`;
-  el.innerHTML = `<span class="mut">📅 Événements :</span> ` + jchip + list.map(x=>
-    `<a href="#" data-gocal="1" class="evchip ${x.live?"live":""}">${x.ev.icon} ${esc(x.ev.name)} <b class="cd" data-t="${x.live?x.end:x.start}" data-live="${x.live?1:0}">${x.live?"en cours":"dans "+fmtCountdown(x.start-now)}</b></a>`).join("");
+  const jchip = `<a href="#" data-gocal="1" class="evchip ${jn.live?"live":""}"><span class="evc">${jev.icon}</span>Jacob <b class="cd" data-t="${jn.live?jn.end:jn.start}" data-live="${jn.live?1:0}">${jn.live?"en cours":"dans "+fmtCountdown(jn.start-now)}</b>${jc?` <span class="mut">· ${jc.map(esc).join(", ")}</span>`:""}</a>`;
+  el.innerHTML = `<span class="evlabel">Calendrier</span>` + jchip + list.map(x=>
+    `<a href="#" data-gocal="1" class="evchip ${x.live?"live":""}"><span class="evc">${x.ev.icon}</span>${esc(x.ev.name)} <b class="cd" data-t="${x.live?x.end:x.start}" data-live="${x.live?1:0}">${x.live?"en cours":"dans "+fmtCountdown(x.start-now)}</b></a>`).join("");
 }
 function tickEvents(){
   const now = Date.now();
@@ -1115,11 +1278,11 @@ function renderCalendar(){
 
   el.innerHTML = `
     <div class="hero" style="margin-bottom:14px">
-      <h2>🕒 Maintenant dans SkyBlock</h2>
+      <h2>Temps SkyBlock</h2>
       <div class="name">${sd.day} ${SB_MONTHS[sd.month]}, année ${sd.year}</div>
       <div class="mut" style="margin-top:4px;font-size:13px">1 jour SkyBlock = 20 min réelles · 1 année = 124 h (≈ 5,2 jours)</div>
     </div>
-    <div class="card" style="margin-bottom:14px"><h3>🏛️ Maire &amp; ministre</h3>${mayor}</div>
+    <div class="card" style="margin-bottom:14px"><h3>Maire &amp; ministre</h3>${mayor}</div>
     <div class="evgrid">${cards}</div>
     <p class="note">Les dates sont calculées à partir du calendrier SkyBlock (déterministe) et affichées dans ton fuseau horaire. Les effets sur les prix sont <b>mesurés</b> sur l'historique réel (comparaison avec des dates témoins), pas supposés.</p>`;
   tickEvents();
@@ -1134,7 +1297,7 @@ function eventsHTML(b){
     tested++; nmax = Math.max(nmax, r.n);
     if(!(r.spike.flag || r.pre.flag || r.after.flag)) continue;
     const n = evNext(ev, now);
-    blocks.push(`<div class="evline"><b>${ev.icon} ${esc(ev.name)}</b> — <span class="${n.live?"c-o":"mut"}">${n.live?"en cours":"prochain : dans "+fmtCountdown(n.start-now)+" ("+fmtLocal(n.start)+")"}</span>
+    blocks.push(`<div class="evline"><b>${esc(ev.name)}</b> — <span class="${n.live?"c-o":"mut"}">${n.live?"en cours":"prochain : dans "+fmtCountdown(n.start-now)+" ("+fmtLocal(n.start)+")"}</span>
       <ul class="reasons">${effectLines(ev,r).map(x=>`<li>${x}</li>`).join("")}</ul>
       ${effectAdvice(r) ? `<div class="tip" style="margin:4px 0">${effectAdvice(r)}</div>`:""}
       <div class="mut" style="font-size:12px">Mesuré sur ${r.n} occurrences.</div></div>`);
@@ -1179,7 +1342,7 @@ function tickStatus(){
   tickEvents();
   if(!lastFetchOk) return;
   const age = Math.round((Date.now()-lastUpdated)/1000);
-  $("#statusTxt").textContent = `Prix Hypixel il y a ${age<90?age+" s":Math.round(age/60)+" min"} · ${bases.length} items`;
+  $("#statusTxt").textContent = `Hypixel · ${age<90?age+" s":Math.round(age/60)+" min"}`;
 }
 
 /* ============================== RENDU ============================== */
@@ -1207,7 +1370,7 @@ function render(){
   // header budget hint
   $("#budgetHint").textContent = isFinite(cfg.budget) && cfg.budget>0 ? "= "+Math.round(cfg.budget).toLocaleString("fr-FR")+" coins" : "Montant invalide";
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on", +c.dataset.v===cfg.budget));
-  $("#maxRiskV").textContent = cfg.maxRisk+" ("+riskLevel(cfg.maxRisk-1).label.toLowerCase()+" et moins)";
+  $("#maxRiskV").textContent = cfg.maxRisk+" · "+riskLevel(cfg.maxRisk-1).label.toLowerCase();
 
   if(!bases.length){ return; }
   if(!(cfg.budget > 0)){ $("#tbody").innerHTML = `<tr><td colspan="10" class="empty">Entre un budget valide (ex : 5m, 250k, 1.2b).</td></tr>`; $("#hero").innerHTML=""; $("#planOut").innerHTML=""; return; }
@@ -1219,8 +1382,10 @@ function render(){
   rowsCache = rows;
 
   renderHero(rows);
+  renderMarketStrip(rows);
   document.querySelectorAll("th[data-sort]").forEach(th=>{
     th.classList.toggle("sorted", th.dataset.sort===cfg.sort);
+    th.classList.toggle("asc", th.dataset.sort===cfg.sort && cfg.dir===1);
   });
   const tbody = $("#tbody");
   if(!rows.length){
@@ -1252,7 +1417,7 @@ function vsUsual(b){
   const w = weekStats(b);
   if(!w || Math.abs(w.dev) < 0.03) return "";
   const c = Math.abs(w.dev) > 0.08 ? "c-o" : "mut";
-  return ` · <span class="${c}" title="Prix actuel comparé à la médiane des 7 derniers jours">${w.dev>0?"+":"−"}${(Math.abs(w.dev)*100).toFixed(0)} % vs habituel${w.falling?" ↘":""}</span>`;
+  return ` · <span class="${c}" title="Prix actuel comparé à la médiane des 7 derniers jours">${w.dev>0?"+":"−"}${(Math.abs(w.dev)*100).toFixed(0)} % vs habituel${w.falling?" · baisse":""}</span>`;
 }
 
 function rowHTML(d,i){
@@ -1271,13 +1436,28 @@ function rowHTML(d,i){
   </tr>`;
 }
 
+// bande d'indicateurs de marché au-dessus du tableau
+function renderMarketStrip(rows){
+  const el = $("#mktStrip"); if(!el) return;
+  const med = a => { if(!a.length) return null; const s = a.slice().sort((x,y)=>x-y); return s[s.length>>1]; };
+  const best = rows.length ? Math.max(...rows.map(d=>d.pph)) : null;
+  const mr = med(rows.map(d=>d.roi)), mk = med(rows.map(d=>d.risk.total)), mv = med(rows.map(d=>d.flow));
+  const cell = (l, v) => '<div><span>' + l + '</span><b>' + v + '</b></div>';
+  el.innerHTML = cell("Items suivis", bases.length.toLocaleString("fr-FR"))
+    + cell("Flips éligibles", rows.length.toLocaleString("fr-FR"))
+    + cell("Meilleur profit /h", best != null ? '<i class="gold" style="font-style:normal">' + fmt(best) + '</i>' : "–")
+    + cell("Marge nette méd.", mr != null ? (mr*100).toFixed(1).replace(".", ",") + " %" : "–")
+    + cell("Risque méd.", mk != null ? '<i class="c-' + riskLevel(mk).k + '" style="font-style:normal">' + Math.round(mk) + '</i>' : "–")
+    + cell("Volume méd. /h", mv != null ? fmt(mv) : "–");
+}
+
 function renderHero(rows){
   const el = $("#hero");
   if(!rows.length){ el.innerHTML=""; return; }
   const top = rows.slice().sort((a,b)=>b.score-a.score)[0];
   const b = top.b, l = riskLevel(top.risk.total);
   el.innerHTML = `<div class="hero">
-    <h2>⭐ Meilleur choix pour ${fmt(cfg.budget)} coins</h2>
+    <h2>Meilleur choix · capital ${fmt(cfg.budget)}</h2>
     <div class="name">${esc(b.name)} <span class="c-${l.k}" style="font-size:14px">· risque ${l.label.toLowerCase()} (${top.risk.total}/100)</span></div>
     <div class="hero-grid">
       <div class="kpi"><b class="gold">${fmt(top.pph)} /h</b><span>profit estimé par heure</span></div>
@@ -1322,7 +1502,7 @@ function renderPlan(){
         <div class="kpi"><b class="pos">${fmt(profit)}</b><span>profit par cycle</span></div>
         <div class="kpi"><b class="c-${l.k}">${l.label} · ${wrisk}</b><span>risque moyen pondéré</span></div>
       </div>
-      ${unused > B*0.15 ? `<p class="note" style="margin-bottom:0">💡 ${fmt(unused)} coins ne sont pas alloués : le marché ne peut pas absorber plus sur ces items dans la durée de cycle choisie. Augmente le nombre d'items, la durée du cycle ou la part de marché pour les utiliser.</p>`:""}
+      ${unused > B*0.15 ? `<p class="note" style="margin-bottom:0">${fmt(unused)} coins ne sont pas alloués : le marché ne peut pas absorber plus sur ces items dans la durée de cycle choisie. Augmente le nombre d'items, la durée du cycle ou la part de marché pour les utiliser.</p>`:""}
     </div>
     <div class="tablewrap"><table class="cardable" style="min-width:800px">
       <thead><tr><th>#</th><th>Item</th><th>Achat → Vente</th><th>Quantité</th><th>Investi</th><th>Durée</th><th>Profit /h</th><th>Risque</th></tr></thead>
@@ -1360,7 +1540,7 @@ async function renderHistory(b){
     attachChart(box, week);
   }catch(e){
     console.error(e);
-    if(dlg.dataset.id === id && $("#histBox")) $("#histBox").innerHTML = isRateLimit(e) ? `<p class="note">⏳ Trop de requêtes vers la source d'historique (sky.coflnet.com) : réessaie dans une minute.</p>` : `<p class="note">Historique indisponible pour le moment (source : sky.coflnet.com). Réessaie plus tard.</p>`;
+    if(dlg.dataset.id === id && $("#histBox")) $("#histBox").innerHTML = isRateLimit(e) ? `<p class="note">Trop de requêtes vers la source d'historique (sky.coflnet.com) : réessaie dans une minute.</p>` : `<p class="note">Historique indisponible pour le moment (source : sky.coflnet.com). Réessaie plus tard.</p>`;
   }
 }
 
@@ -1399,16 +1579,16 @@ function historyHTML(b, week, daily){
     if(v==null) return `<td class="mut">–</td>`;
     const a = Math.min(0.55, Math.abs(v)/(amp||1)*0.55);
     const isGood = (good>0) === (v>0);
-    const bg = Math.abs(v) < 0.002 ? "transparent" : `rgba(${isGood?"63,185,80":"248,81,73"},${a.toFixed(2)})`;
+    const bg = Math.abs(v) < 0.002 ? "transparent" : `rgba(${isGood?"46,190,135":"238,90,90"},${a.toFixed(2)})`;
     return `<td style="background:${bg}" class="${i===key?"best":""} ${i===nowSlot?"now":""}">${v>0?"+":v<0?"−":""}${(Math.abs(v)*100).toFixed(1).replace(".",",")}</td>`;
   };
   const row = (label, sel, good, key) => `<tr><th>${label}</th>${prof.map((p,i)=>cell(p?sel(p):null,i,good,key)).join("")}</tr>`;
 
   const advice = [];
   if(valid.length >= 6 && amp >= 0.01){
-    advice.push(`🛒 <b>Placer tes ordres d'achat</b> vers <b>${HOUR_LABEL(bestBuy)}</b> : le prix d'achat est en général ${signed(prof[bestBuy].b)} par rapport à la moyenne.`);
-    advice.push(`💰 <b>Vendre / relister</b> vers <b>${HOUR_LABEL(bestSell)}</b> : le prix de revente est en général ${signed(prof[bestSell].s)}.`);
-    if(bestSpr>=0) advice.push(`📊 <b>Écart d'achat/revente le plus large</b> vers <b>${HOUR_LABEL(bestSpr)}</b> (≈ ${(prof[bestSpr].m*100).toFixed(1).replace(".",",")} % contre ${(sprRef*100).toFixed(1).replace(".",",")} % en moyenne).`);
+    advice.push(`<b>Placer tes ordres d'achat</b> vers <b>${HOUR_LABEL(bestBuy)}</b> : le prix d'achat est en général ${signed(prof[bestBuy].b)} par rapport à la moyenne.`);
+    advice.push(`<b>Vendre / relister</b> vers <b>${HOUR_LABEL(bestSell)}</b> : le prix de revente est en général ${signed(prof[bestSell].s)}.`);
+    if(bestSpr>=0) advice.push(`<b>Écart d'achat/revente le plus large</b> vers <b>${HOUR_LABEL(bestSpr)}</b> (≈ ${(prof[bestSpr].m*100).toFixed(1).replace(".",",")} % contre ${(sprRef*100).toFixed(1).replace(".",",")} % en moyenne).`);
   }else{
     advice.push(`Le prix de cet item varie très peu selon l'heure (moins de 1 %) : le moment de la journée compte peu, surveille plutôt la tendance sur plusieurs jours.`);
   }
@@ -1421,9 +1601,9 @@ function historyHTML(b, week, daily){
       ${dayKpi}
       ${isFinite(buy30) ? `<div class="kpi"><b>${fmt(buy30)} → ${fmt(sell30)}</b><span>prix habituel sur 30 jours (achat → revente)</span></div>`:""}
     </div>
-    ${w && w.dev < -0.08 ? `<div class="warn">⚠️ Le prix est actuellement <b>${(-w.dev*100).toFixed(0)} % sous son niveau habituel</b>${w.falling?" et il est <b>en baisse depuis plusieurs jours</b>":""}. Une « bonne affaire » apparente peut être un prix qui continue de chuter : ne mise pas gros et vérifie le carnet.</div>`:""}
-    ${w && w.dev > 0.08 ? `<div class="warn">⚠️ Le prix est <b>${(w.dev*100).toFixed(0)} % au-dessus de son niveau habituel</b> : risque d'acheter près d'un sommet.</div>`:""}
-    <div class="leg"><span><i class="sw" style="background:var(--gold)"></i>Prix de revente (offres de vente)</span><span><i class="sw" style="background:var(--blue)"></i>Prix d'achat (ordres d'achat)</span><span><i class="sw" style="background:var(--muted);height:0;border-top:2px dashed var(--muted)"></i>Médiane 7 j</span></div>
+    ${w && w.dev < -0.08 ? `<div class="warn">Le prix est actuellement <b>${(-w.dev*100).toFixed(0)} % sous son niveau habituel</b>${w.falling?" et il est <b>en baisse depuis plusieurs jours</b>":""}. Une « bonne affaire » apparente peut être un prix qui continue de chuter : ne mise pas gros et vérifie le carnet.</div>`:""}
+    ${w && w.dev > 0.08 ? `<div class="warn">Le prix est <b>${(w.dev*100).toFixed(0)} % au-dessus de son niveau habituel</b> : risque d'acheter près d'un sommet.</div>`:""}
+    <div class="leg"><span><i class="sw" style="background:var(--amb)"></i>Prix de revente (offres de vente)</span><span><i class="sw" style="background:var(--ice)"></i>Prix d'achat (ordres d'achat)</span><span><i class="sw" style="background:none;border-top:2px dashed var(--t3);height:0"></i>Médiane 7 j</span></div>
     <div class="chartwrap"><svg id="hchart" viewBox="0 0 700 230" aria-label="Historique du prix sur 7 jours"></svg><div class="ctip" id="ctip"></div></div>
     <h3 style="margin-top:16px">Quelles heures ? <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(écart par rapport à la moyenne de la semaine, en %, heure locale)</span></h3>
     <div class="hscroll"><table class="hour">
@@ -1450,16 +1630,16 @@ function attachChart(box, week){
   const medB = median(week.map(p=>p.sell)), medS = median(week.map(p=>p.buy));
   let g = "";
   for(let i=0;i<=4;i++){ const v = lo+(hi-lo)*i/4, y = Y(v).toFixed(1);
-    g += `<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#2a3342" stroke-width="1"/><text x="${pl-6}" y="${(+y+4)}" text-anchor="end" fill="#8b98a9" font-size="11">${fmt(v)}</text>`; }
+    g += `<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#1D242D" stroke-width="1"/><text x="${pl-6}" y="${(+y+4)}" text-anchor="end" fill="#7D8794" font-size="10.5" font-family="IBM Plex Mono, monospace">${fmt(v)}</text>`; }
   const d = new Date(t0); d.setHours(24,0,0,0);
   for(; d.getTime() < t1; d.setDate(d.getDate()+1)){ const x = X(d.getTime()).toFixed(1);
-    g += `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="#2a3342" stroke-dasharray="2 4"/><text x="${x}" y="${H-8}" text-anchor="middle" fill="#8b98a9" font-size="11">${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"})}</text>`; }
-  g += `<line x1="${pl}" x2="${W-pr}" y1="${Y(medS)}" y2="${Y(medS)}" stroke="#f5c542" stroke-opacity=".5" stroke-dasharray="6 5"/>`
-     + `<line x1="${pl}" x2="${W-pr}" y1="${Y(medB)}" y2="${Y(medB)}" stroke="#58a6ff" stroke-opacity=".5" stroke-dasharray="6 5"/>`
-     + `<path d="${path("buy")}" fill="none" stroke="#f5c542" stroke-width="2" vector-effect="non-scaling-stroke"/>`
-     + `<path d="${path("sell")}" fill="none" stroke="#58a6ff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
-  if(b) g += `<circle cx="${X(now)}" cy="${Y(b.askTop)}" r="4" fill="#f5c542" stroke="#0d1117"/><circle cx="${X(now)}" cy="${Y(b.bidTop)}" r="4" fill="#58a6ff" stroke="#0d1117"/>`;
-  g += `<line id="cline" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="#e6edf3" stroke-opacity=".5" visibility="hidden"/>`;
+    g += `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="#1D242D" stroke-dasharray="2 4"/><text x="${x}" y="${H-8}" text-anchor="middle" fill="#7D8794" font-size="10.5" font-family="IBM Plex Mono, monospace">${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"})}</text>`; }
+  g += `<line x1="${pl}" x2="${W-pr}" y1="${Y(medS)}" y2="${Y(medS)}" stroke="#E5A13B" stroke-opacity=".45" stroke-dasharray="6 5"/>`
+     + `<line x1="${pl}" x2="${W-pr}" y1="${Y(medB)}" y2="${Y(medB)}" stroke="#8CC3EA" stroke-opacity=".45" stroke-dasharray="6 5"/>`
+     + `<path d="${path("buy")}" fill="none" stroke="#E5A13B" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`
+     + `<path d="${path("sell")}" fill="none" stroke="#8CC3EA" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+  if(b) g += `<circle cx="${X(now)}" cy="${Y(b.askTop)}" r="3.5" fill="#E5A13B" stroke="#090B0E"/><circle cx="${X(now)}" cy="${Y(b.bidTop)}" r="3.5" fill="#8CC3EA" stroke="#090B0E"/>`;
+  g += `<line id="cline" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="#E4E8ED" stroke-opacity=".4" visibility="hidden"/>`;
   svg.innerHTML = g;
   const line = svg.querySelector("#cline"), wrap = svg.parentElement;
   svg.addEventListener("pointermove", ev=>{
@@ -1482,7 +1662,7 @@ function openDetail(id){
   dlg.dataset.id = id;
   const showDlg = () => { if(!dlg.open) dlg.showModal(); };
   if(!d || d.tooExpensive){
-    dlg.innerHTML = `<div class="dhead"><div style="flex:1"><b style="font-size:18px">${esc(b.name)}</b></div><button class="btn" data-close>✕</button></div>
+    dlg.innerHTML = `<div class="dhead"><div style="flex:1"><b style="font-size:18px">${esc(b.name)}</b></div><button class="btn ghost" data-close aria-label="Fermer"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
       <div class="dbody"><p>Cet item n'est pas rentable ou trop cher pour ton budget (1 unité ≈ ${fmt(b.entry)} coins).</p></div>`;
     showDlg(); return;
   }
@@ -1500,7 +1680,7 @@ function openDetail(id){
         <div class="mut" style="font-size:12px">${esc(b.id)}</div>
       </div>
       <div class="risk" style="min-width:0"><span class="rl c-${l.k}" style="font-size:14px">Risque ${l.label.toLowerCase()} · ${r.total}/100</span></div>
-      <button class="btn" data-close aria-label="Fermer">✕</button>
+      <button class="btn ghost" data-close aria-label="Fermer"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
     </div>
     <div class="dbody">
       <div class="hero-grid" style="margin:0">
@@ -1515,7 +1695,7 @@ function openDetail(id){
       <div>
         <h3>Étapes à suivre en jeu</h3>
         <ol class="steps">
-          <li>Ouvre le Bazaar (<code>/bz</code>), clique sur la recherche (loupe) et tape <button class="btn" data-copy="${esc(b.search)}" style="padding:1px 8px" title="Copier le terme de recherche">📋 ${esc(b.search)}</button>
+          <li>Ouvre le Bazaar (<code>/bz</code>), clique sur la recherche (loupe) et tape <button class="btn sm" data-copy="${esc(b.search)}" title="Copier le terme de recherche"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg>${esc(b.search)}</button>
               ${b.book ? `<div class="mut" style="font-size:12.5px;margin-top:4px">C'est un <b>livre d'enchantement${b.ultimate?" ultime":""}</b> : il apparaît dans le Bazaar sous le nom <b>« ${esc(b.name)} »</b> (chiffres romains, pas « ${esc(b.id.replace(/^ENCHANTMENT_/,"").replace(/_/g," ").toLowerCase())} »). Cherche seulement « ${esc(b.search)} », puis choisis le bon niveau dans la liste. Si rien n'apparaît, regarde dans la catégorie des enchantements.</div>` : `<div class="mut" style="font-size:12.5px;margin-top:4px">Si le nom exact ne donne rien, cherche un seul mot de ce nom.</div>`}</li>
           <li><b>Create Buy Order</b> : quantité <code>${d.units.toLocaleString("fr-FR")}</code> à <code>${price(b.entry)}</code> coins/unité
               → coût total <b>≈ ${full(d.invested)}</b> coins. <span class="mut">(le prix est +0,1 au-dessus du meilleur ordre d'achat actuel, ${price(b.bidTop)})</span></li>
@@ -1526,7 +1706,7 @@ function openDetail(id){
           <li>Profit net attendu : <b class="pos">+${full(d.profit)}</b> coins. Vérifie de temps en temps que tes ordres sont toujours en tête, sinon ajuste de 0,1.</li>
         </ol>
         ${npcFloorNote(b, d)}
-        <button class="btn gold trackbtn" data-track="${esc(b.id)}">➕ Suivre ce flip dans « Mon suivi »</button>
+        <button class="btn gold trackbtn" data-track="${esc(b.id)}"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Suivre ce flip dans « Mon suivi »</button>
         <div class="warn" style="margin-top:12px">Les prix ont quelques dizaines de secondes de retard : <b>vérifie le carnet en jeu</b> avant de valider.
           Coussin de sécurité : le prix de revente peut baisser d'environ <b>${(cushion*100).toFixed(1)} %</b> avant que tu perdes de l'argent.
           Si tu devais tout revendre immédiatement au meilleur ordre d'achat : <b class="${dumpLoss<0?"neg":"pos"}">${dumpLoss<0?"−":"+"}${fmt(Math.abs(dumpLoss))}</b> coins.</div>
@@ -1653,7 +1833,7 @@ function renderNpc(){
     return '<tr data-npc="' + esc(c.id) + '" data-mode="instant"><td class="rank">' + (i+1) + '</td>'
       + '<td><div class="iname">' + starBtn(c.id) + esc(c.name) + '</div><div class="iid">' + esc(c.id) + '</div></td>'
       + '<td data-l="Bazaar (moyen) → PNJ">' + fmt(a.avg) + ' → ' + fmt(c.npc) + '</td>'
-      + '<td data-l="Marge" class="' + (a.roi > 0.30 ? 'c-o' : 'pos') + '" title="' + (a.roi > 0.30 ? 'Écart anormalement grand : teste 1 unité et vérifie le prix PNJ en jeu' : '') + '">' + (a.roi > 0.30 ? '⚠️ ' : '') + '+' + (a.roi*100).toFixed(1) + ' %</td>'
+      + '<td data-l="Marge" class="' + (a.roi > 0.30 ? 'c-o' : 'pos') + '" title="' + (a.roi > 0.30 ? 'Écart anormalement grand : teste 1 unité et vérifie le prix PNJ en jeu' : '') + '">' + (a.roi > 0.30 ? '<svg class="ic w" aria-hidden="true"><use href="#i-warn"/></svg> ' : '') + '+' + (a.roi*100).toFixed(1) + ' %</td>'
       + '<td data-l="Quantité · coût">' + a.units.toLocaleString("fr-FR") + ' <span class="mut">· ' + fmt(a.cost) + '</span></td>'
       + '<td data-l="Profit" class="gold"><b>' + fmt(a.profit) + '</b></td>'
       + '<td data-l="Délai" class="mut">immédiat</td></tr>';
@@ -1673,11 +1853,11 @@ function renderNpc(){
   }).join("");
 
   el.innerHTML =
-    '<h3 class="npch">⚡ Achat instantané → revente au PNJ <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(profit immédiat, sans attente)</span></h3>'
+    '<h3 class="npch">Achat instantané → revente au PNJ <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(profit immédiat, sans attente)</span></h3>'
     + (inst.length ? '<div class="tablewrap"><table class="cardable" style="min-width:820px"><thead><tr><th class="rank">#</th><th>Item</th><th>Bazaar (moyen) → PNJ</th><th>Marge</th><th>Quantité · coût</th><th>Profit</th><th>Délai</th></tr></thead><tbody>' + instRows + '</tbody></table></div>'
         + '<p class="note">Profit unique : limité par le nombre d\'offres moins chères que le PNJ dans le carnet. Il se reforme de temps en temps, repasse voir régulièrement.</p>'
       : '<div class="card"><p style="margin:0">Aucune opportunité instantanée au-dessus de ' + fmt(min) + ' de gain avec ce budget. C\'est normal : des robots exploitent ces écarts en quelques secondes. Baisse le « gain minimum » ou regarde les ordres d\'achat ci-dessous.</p></div>')
-    + '<h3 class="npch" style="margin-top:24px">🕓 Ordre d\'achat → revente au PNJ <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(plus de marge, il faut patienter)</span></h3>'
+    + '<h3 class="npch" style="margin-top:24px">Ordre d\'achat → revente au PNJ <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(plus de marge, il faut patienter)</span></h3>'
     + (ord.length ? '<div class="tablewrap"><table class="cardable" style="min-width:980px"><thead><tr><th class="rank">#</th><th>Item</th><th>Ordre d\'achat → PNJ</th><th>Marge</th><th>Ventes inst. /h</th><th>Quantité · coût</th><th>Remplissage</th><th>Profit /h</th><th>Profit /cycle</th><th>Risque</th></tr></thead><tbody>' + ordRows + '</tbody></table></div>'
         + '<p class="note">Classement par profit /h ajusté au risque, avec ta « part du marché » et ta « durée de cycle » des réglages. Le risque ne porte que sur la vitesse de remplissage et la fiabilité du prix PNJ : la revente, elle, est à prix fixe.</p>'
       : '<div class="card"><p style="margin:0">Aucun ordre d\'achat ne dépasse ' + fmt(min) + ' de gain avec ton risque maximum (' + cfg.maxRisk + '). Baisse le « gain minimum » ou augmente le risque accepté.</p></div>');
@@ -1688,7 +1868,7 @@ function openNpcDetail(id, mode){
   const dlg = $("#dlg");
   dlg.dataset.id = "npc:" + id;
   const r = mode === "instant" ? npcInstant(c, cfg.budget) : npcOrder(c, cfg.budget);
-  const head = '<div class="dhead"><div style="flex:1"><div style="font-size:20px;font-weight:700">' + starBtn(c.id) + esc(c.name) + '</div><div class="mut" style="font-size:12px">' + esc(c.id) + ' · flip PNJ ' + (mode === "instant" ? "instantané" : "par ordre d'achat") + '</div></div><button class="btn" data-close aria-label="Fermer">✕</button></div>';
+  const head = '<div class="dhead"><div style="flex:1"><div style="font-size:20px;font-weight:700">' + starBtn(c.id) + esc(c.name) + '</div><div class="mut" style="font-size:12px">' + esc(c.id) + ' · flip PNJ ' + (mode === "instant" ? "instantané" : "par ordre d'achat") + '</div></div><button class="btn ghost" data-close aria-label="Fermer"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>';
   if(!r){
     dlg.innerHTML = head + '<div class="dbody"><p>Ce flip n\'est plus possible avec ton budget et les prix actuels.</p></div>';
     if(!dlg.open) dlg.showModal(); return;
@@ -1705,7 +1885,7 @@ function openNpcDetail(id, mode){
       + '<div class="kpi"><b>' + (r.roi*100).toFixed(1) + ' %</b><span>marge sur le capital</span></div>';
   const steps = mode === "instant"
     ? '<li><b>Teste d\'abord avec 1 unité</b> : achète-en une seule et regarde le prix de rachat du PNJ dans le jeu (il doit être ≈ <code>' + price(c.npc) + '</code>). Le prix vient de l\'API items d\'Hypixel : ne l\'achète pas en masse sans avoir vérifié.</li>'
-      + '<li>Ouvre le Bazaar (<code>/bz</code>), cherche <button class="btn" data-copy="' + esc(c.name) + '" style="padding:1px 8px">📋 ' + esc(c.name) + '</button> puis <b>Buy Instantly</b> : quantité <code>' + r.units.toLocaleString("fr-FR") + '</code> → coût <b>≈ ' + full(r.cost) + '</b> coins (prix moyen ' + price(r.avg) + ').</li>'
+      + '<li>Ouvre le Bazaar (<code>/bz</code>), cherche <button class="btn sm" data-copy="' + esc(c.name) + '"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg>' + esc(c.name) + '</button> puis <b>Buy Instantly</b> : quantité <code>' + r.units.toLocaleString("fr-FR") + '</code> → coût <b>≈ ' + full(r.cost) + '</b> coins (prix moyen ' + price(r.avg) + ').</li>'
       + '<li>Vends-les à un PNJ qui rachète cet item, à <code>' + price(c.npc) + '</code> coins pièce (<b>aucune taxe</b>) → tu encaisses <b>≈ ' + full(revenue) + '</b> coins.</li>'
       + '<li>Profit net : <b class="pos">+' + full(r.profit) + '</b> coins.</li>'
     : '<li><b>Teste d\'abord avec 1 unité</b> (voir avertissement ci-dessous) : vérifie que le PNJ rachète bien l\'item à ≈ <code>' + price(c.npc) + '</code>.</li>'
@@ -1728,7 +1908,7 @@ function npcFloorNote(b, d){
   const txt = floor >= 0
     ? "même si le marché s'effondre, tu peux revendre au PNJ et gagner ≈ <b>" + fmt(floor) + "</b> coins sur cette quantité"
     : "si le marché s'effondre, tu peux revendre au PNJ pour limiter la casse : perte plafonnée à ≈ <b>" + fmt(-floor) + "</b> coins sur cette quantité";
-  return '<div class="tip" style="margin-top:12px">🏪 Le PNJ rachète cet item <b>' + price(m.p) + '</b> coins pièce, <b>sans taxe</b> : c\'est un <b>prix plancher</b>. ' + txt + '. <span class="mut">(prix issu de l\'API items : vérifie-le en jeu)</span></div>';
+  return '<div class="tip" style="margin-top:12px">Le PNJ rachète cet item <b>' + price(m.p) + '</b> coins pièce, <b>sans taxe</b> : c\'est un <b>prix plancher</b>. ' + txt + '. <span class="mut">(prix issu de l\'API items : vérifie-le en jeu)</span></div>';
 }
 
 /* ============================== FAVORIS ============================== */
@@ -1742,15 +1922,15 @@ function toggleFav(id){
   if(i >= 0) favs.splice(i, 1);
   else{ const b = bases.find(x => x.id === id); favs.push({id, name: b ? b.name : prettify(id)}); }
   saveFavs();
-  document.querySelectorAll('[data-fav="' + CSS.escape(id) + '"]').forEach(el => { el.classList.toggle("on", isFav(id)); el.textContent = isFav(id) ? "★" : "☆"; });
+  document.querySelectorAll('[data-fav="' + CSS.escape(id) + '"]').forEach(el => { el.classList.toggle("on", isFav(id)); });
   render();
 }
-const starBtn = id => '<button class="star ' + (isFav(id) ? "on" : "") + '" data-fav="' + esc(id) + '" title="' + (isFav(id) ? "Retirer des favoris" : "Ajouter aux favoris") + '" aria-label="Favori">' + (isFav(id) ? "★" : "☆") + '</button>';
+const starBtn = id => '<button class="star ' + (isFav(id) ? "on" : "") + '" data-fav="' + esc(id) + '" title="' + (isFav(id) ? "Retirer des favoris" : "Ajouter aux favoris") + '" aria-label="Favori"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></button>';
 
 const FAV_STATUS = {
-  good:   {rank:0, label:"✅ Rentable",        cls:"c-g"},
+  good:   {rank:0, label:"Rentable",        cls:"c-g"},
   thin:   {rank:1, label:"Marge faible",        cls:"c-y"},
-  risky:  {rank:2, label:"⚠️ Risque élevé",    cls:"c-o"},
+  risky:  {rank:2, label:"Risque élevé",    cls:"c-o"},
   pricey: {rank:3, label:"Trop cher (budget)",  cls:"mut"},
   neg:    {rank:4, label:"Pas rentable",        cls:"mut"},
   none:   {rank:5, label:"Indisponible",        cls:"mut"}
@@ -1769,7 +1949,7 @@ function renderFavs(){
   const el = $("#favList"); if(!el) return;
   const infos = favs.map(favInfo).sort((a, b) => FAV_STATUS[a.status].rank - FAV_STATUS[b.status].rank || ((b.d && b.d.pph) || 0) - ((a.d && a.d.pph) || 0));
   const good = infos.filter(x => x.status === "good");
-  $("#favBadge").textContent = good.length ? "(" + good.length + ")" : "";
+  $("#favBadge").textContent = good.length ? String(good.length) : "";
   for(const x of good){                                    // un favori devient rentable : notification si la page est en arrière-plan
     if(!favGood.has(x.f.id)){
       favGood.add(x.f.id);
@@ -1778,14 +1958,14 @@ function renderFavs(){
   }
   for(const id of [...favGood]) if(!good.some(x => x.f.id === id)) favGood.delete(id);
   if(!favs.length){
-    el.innerHTML = '<div class="card"><p style="margin:0">Aucun favori pour l\'instant. Clique sur l\'étoile <b>☆</b> à côté d\'un item (dans le tableau, dans sa fiche, ou avec la recherche ci-dessus) pour le suivre ici, <b>même s\'il n\'est pas rentable</b> ou dépasse ton budget : tu verras dès qu\'il redevient intéressant.</p></div>';
+    el.innerHTML = '<div class="card"><p style="margin:0">Aucun favori pour l\'instant. Clique sur l\'étoile à côté d\'un item (dans le tableau, dans sa fiche, ou avec la recherche ci-dessus) pour le suivre ici, <b>même s\'il n\'est pas rentable</b> ou dépasse ton budget : tu verras dès qu\'il redevient intéressant.</p></div>';
     return;
   }
   const rows = infos.map((x, i) => {
     const st = FAV_STATUS[x.status], b = x.b, d = x.d;
     const name = '<div class="iname">' + starBtn(x.f.id) + esc(b ? b.name : x.f.name) + '</div><div class="iid">' + esc(x.f.id) + (b ? vsUsual(b) + evBadge(b) : "") + '</div>';
     const chip = '<span class="' + st.cls + '" style="font-weight:700">' + st.label + '</span>';
-    if(!b) return '<tr data-id="' + esc(x.f.id) + '"><td class="rank">' + (i+1) + '</td><td>' + name + '</td><td data-l="Statut">' + chip + '<div class="iid">carnet vide ou sans échanges</div></td><td></td><td></td><td></td><td></td><td></td></tr>';
+    if(!b) return '<tr data-id="' + esc(x.f.id) + '"><td class="rank">' + (i+1) + '</td><td>' + name + '</td><td data-l="Statut">' + chip + '<div class="iid">carnet vide ou sans échanges</div></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
     const net = d ? d.roi : (b.exit*(1-cfg.tax) - b.entry) / b.entry;
     const ok = d && !d.tooExpensive;
     return '<tr data-id="' + esc(x.f.id) + '"><td class="rank">' + (i+1) + '</td><td>' + name + '</td>'
@@ -1794,10 +1974,35 @@ function renderFavs(){
       + '<td data-l="Marge nette" class="' + (net > 0 ? "pos" : "neg") + '">' + (net > 0 ? "+" : "") + (net*100).toFixed(1) + ' %</td>'
       + '<td data-l="Volume /h (vente · achat)" class="mut">' + fmt(b.is) + ' · ' + fmt(b.ib) + '</td>'
       + '<td data-l="Profit /h" class="gold">' + (ok ? '<b>' + fmt(d.pph) + '</b>' : "–") + '</td>'
+      + '<td data-l="7 jours">' + sparkSVG(x.f.id) + '</td>'
       + '<td data-l="Risque">' + (ok ? riskHTML(d.risk) : "–") + '</td></tr>';
   }).join("");
-  el.innerHTML = '<div class="tablewrap"><table class="cardable" style="min-width:860px"><thead><tr><th class="rank"></th><th>Item</th><th>Statut</th><th>Achat → Vente</th><th>Marge nette</th><th>Volume /h</th><th>Profit /h</th><th>Risque</th></tr></thead><tbody>'
+  el.innerHTML = '<div class="tablewrap"><table class="cardable" style="min-width:860px"><thead><tr><th class="rank"></th><th>Item</th><th>Statut</th><th>Achat → Vente</th><th>Marge nette</th><th>Volume /h</th><th>Profit /h</th><th>7 jours</th><th>Risque</th></tr></thead><tbody>'
     + rows + '</tbody></table></div><p class="note">Les favoris sont affichés même s\'ils ne passent pas tes filtres (risque, volume, budget). Ils sont enregistrés dans ton navigateur.</p>';
+  prefetchFavs();
+}
+// mini-courbe des 7 derniers jours (prix médian) ; vert / rouge selon la tendance
+function sparkSVG(id){
+  const c = extCache[id];
+  if(!c || !c.week || c.week.length < 12) return "";
+  const v = c.week.map(p => (p.buy + p.sell)/2), lo = Math.min(...v), hi = Math.max(...v), W = 74, H = 22, n = v.length;
+  const pts = v.map((y, i) => (i/(n-1)*(W-2) + 1).toFixed(1) + "," + (H - 2 - (hi > lo ? (y-lo)/(hi-lo) : .5)*(H-4)).toFixed(1)).join(" ");
+  const up = v[n-1] >= v[0];
+  return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="' + (up ? "#2EBE87" : "#EE5A5A") + '" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>';
+}
+let favPrefetching = false;
+async function prefetchFavs(){
+  if(favPrefetching || Date.now() < cfBlockedUntil) return;
+  const todo = favs.map(f => f.id).filter(id => !isFresh(id)).slice(0, 12);
+  if(!todo.length) return;
+  favPrefetching = true;
+  let got = 0;
+  for(const id of todo){
+    try{ await loadWeek(id); got++; }
+    catch(e){ if(isRateLimit(e)) break; extCache[id] = {t:Date.now(), week:null}; }
+  }
+  favPrefetching = false;
+  if(got){ saveExt(); renderFavs(); }
 }
 function renderFavSearch(){
   const q = $("#favq").value.trim().toLowerCase(), out = $("#favRes");
@@ -1849,7 +2054,7 @@ function advise(p, b){
     if(b.bidTop < p.entry-0.15) return {lv:"warn", alert:false, txt:`Le meilleur ordre d'achat est plus bas que le tien (${price(b.bidTop)}) : tu peux poser ton ordre à ${price(newEntry)} et payer moins cher.`};
     const cur = (b.exit*(1-tax) - p.entry)/p.entry;
     if(cur < 0.01) return {lv:"warn", alert:true, txt:`Tu es en tête, mais la marge nette actuelle n'est plus que de ${(cur*100).toFixed(1)} % (revente à ${price(b.exit)}) : surveille ou annule.`};
-    return {lv:"ok", alert:false, txt:`Tu es en tête ✔ · marge nette actuelle ${(cur*100).toFixed(1)} %.`};
+    return {lv:"ok", alert:false, txt:`Tu es en tête · marge nette actuelle ${(cur*100).toFixed(1)} %.`};
   }
   const target = r1(b.askTop-0.1);
   if(b.askTop < p.exit-0.05){
@@ -1859,7 +2064,7 @@ function advise(p, b){
       : {lv:"warn", alert:true, txt:`Tu es sous-coté (meilleure offre : ${price(b.askTop)}). Pour repasser devant : ${price(target)} → profit net ${fmt(pr)}.`};
   }
   if(b.askTop > p.exit+0.15) return {lv:"warn", alert:false, txt:`La meilleure offre est plus haute que la tienne (${price(b.askTop)}) : tu peux vendre à ${price(target)} (${fmt(profitAt(target))} de profit net).`};
-  return {lv:"ok", alert:false, txt:`Tu es en tête ✔ · profit net attendu ${fmt(profitAt(p.exit))}.`};
+  return {lv:"ok", alert:false, txt:`Tu es en tête · profit net attendu ${fmt(profitAt(p.exit))}.`};
 }
 
 function renderTracker(){
@@ -1882,7 +2087,7 @@ function renderTracker(){
     return `<div class="card posn ${adv.lv}" data-pid="${p.pid}">
       <div class="evhead"><div style="flex:1"><h3 style="margin:0">${esc(p.name)}</h3>
         <div class="mut" style="font-size:12px">${buying?"Ordre d'achat en cours":"Offre de vente en cours"} · suivi depuis ${held}</div></div>
-        <span class="evstatus">${buying?"🛒 Achat":"💰 Vente"}</span></div>
+        <span class="evstatus">${buying?"ACHAT":"VENTE"}</span></div>
       <div class="hero-grid" style="margin:10px 0">
         <div class="kpi"><b>${p.units.toLocaleString("fr-FR")}</b><span>quantité</span></div>
         <div class="kpi"><b>${fmt(p.entry)} → ${fmt(p.exit)}</b><span>achat → vente visés</span></div>
@@ -1892,9 +2097,9 @@ function renderTracker(){
       <div class="advice c-${adv.lv==="ok"?"g":adv.lv==="warn"?"o":adv.lv==="bad"?"r":"mut"}">${esc(adv.txt)}</div>
       ${b?`<div class="mut" style="font-size:12px;margin:4px 0 8px">Marché maintenant : meilleur ordre d'achat ${price(b.bidTop)} · meilleure offre de vente ${price(b.askTop)}</div>`:""}
       <div class="frow" style="justify-content:flex-start">
-        <button class="btn gold" data-act="${buying?"bought":"sold"}">${buying?"✔ Acheté":"✔ Vendu"}</button>
-        <button class="btn" data-act="edit">✎ Modifier le prix</button>
-        <button class="btn" data-act="del">🗑 Supprimer</button>
+        <button class="btn gold" data-act="${buying?"bought":"sold"}">${buying?"Acheté":"Vendu"}</button>
+        <button class="btn" data-act="edit">Modifier le prix</button>
+        <button class="btn" data-act="del">Supprimer</button>
       </div></div>`;
   }).join("");
 
@@ -1906,10 +2111,10 @@ function renderTracker(){
   const wins = done.filter(p=>profitOf(p)>0).length;
 
   const perm = window.Notification && Notification.permission==="default"
-    ? `<button class="btn" data-act="notif">🔔 M'avertir quand un ordre doit être ajusté</button>` : "";
+    ? `<button class="btn" data-act="notif">M'avertir quand un ordre doit être ajusté</button>` : "";
 
   el.innerHTML = `
-    <div class="hero" style="margin-bottom:14px"><h2>💼 Mon suivi</h2>
+    <div class="hero" style="margin-bottom:14px"><h2>Bilan</h2>
       <div class="hero-grid">
         <div class="kpi"><b>${active.length}</b><span>flip(s) en cours${alerts?` · <span class="c-o">${alerts} à ajuster</span>`:""}</span></div>
         <div class="kpi"><b>${fmt(engaged)}</b><span>capital engagé</span></div>
@@ -1917,9 +2122,9 @@ function renderTracker(){
         <div class="kpi"><b class="${total>=0?"gold":"neg"}">${fmt(total)}</b><span>profit réalisé (${done.length} flip${done.length>1?"s":""}${done.length?`, ${wins} gagnant${wins>1?"s":""}`:""})</span></div>
         ${hours>0?`<div class="kpi"><b>${fmt(total/hours)} /h</b><span>rythme réel moyen</span></div>`:""}
       </div>
-      <div style="margin-top:10px">${perm}</div></div>
+      ${perm ? `<div style="margin-top:10px">${perm}</div>` : ""}</div>
     ${active.length ? `<div class="evgrid">${cards}</div>` :
-      `<div class="card"><p style="margin:0">Aucun flip suivi pour l'instant. Ouvre la fiche d'un item (clic sur une ligne des meilleurs flips) puis clique sur <b>« ➕ Suivre ce flip »</b> : la page te dira en direct si tu es dépassé, sous-coté, ou si la marge fond, et calculera ton profit réel une fois vendu.</p>
+      `<div class="card"><p style="margin:0">Aucun flip suivi pour l'instant. Ouvre la fiche d'un item (clic sur une ligne des meilleurs flips) puis clique sur <b>« Suivre ce flip »</b> : la page te dira en direct si tu es dépassé, sous-coté, ou si la marge fond, et calculera ton profit réel une fois vendu.</p>
        <p class="note">Les données restent dans ton navigateur (rien n'est envoyé nulle part).</p></div>`}
     ${done.length ? `<h3 style="margin:22px 0 8px;color:var(--gold)">Historique</h3><div class="tablewrap"><table style="min-width:640px">
       <thead><tr><th>Item</th><th>Quantité</th><th>Achat → Vente (réels)</th><th>Durée</th><th>Profit net</th></tr></thead>
@@ -1928,7 +2133,7 @@ function renderTracker(){
         <td class="${profitOf(p)>=0?"pos":"neg"}"><b>${fmt(profitOf(p))}</b></td></tr>`).join("")}</tbody></table></div>
       <div class="frow" style="justify-content:flex-start;margin-top:8px"><button class="btn" data-act="clear">Vider l'historique</button></div>` : ""}`;
 
-  $("#trackBadge").textContent = alerts ? `(${alerts})` : "";
+  $("#trackBadge").textContent = alerts ? String(alerts) : "";
   document.title = (alerts ? `(${alerts}) ` : "") + "Wolf of Sky — Bazaar Flipper";
 }
 
@@ -1999,7 +2204,7 @@ function init(){
     const tr2 = e.target.closest("[data-track]");
     if(tr2){
       const ok = trackFlip(tr2.dataset.track);
-      tr2.textContent = ok ? "✔ Ajouté à « Mon suivi »" : "Impossible (budget insuffisant ?)";
+      tr2.textContent = ok ? "Ajouté à « Mon suivi »" : "Impossible (budget insuffisant ?)";
       if(ok){ tr2.disabled = true; setTimeout(()=>{ $("#dlg").close(); showTab("track"); }, 700); }
       return;
     }
@@ -2015,7 +2220,7 @@ function init(){
     const tr = e.target.closest("tbody tr[data-id]");
     if(tr && !e.target.closest("dialog")){ openDetail(tr.dataset.id); return; }
     const cp = e.target.closest("[data-copy]");
-    if(cp){ try{ navigator.clipboard.writeText(cp.dataset.copy); const o=cp.textContent; cp.textContent="✔ copié"; setTimeout(()=>cp.textContent=o,1200);}catch(_){} return; }
+    if(cp){ try{ navigator.clipboard.writeText(cp.dataset.copy); const o=cp.innerHTML; cp.textContent="Copié"; setTimeout(()=>cp.innerHTML=o,1200);}catch(_){} return; }
     if(e.target.closest("[data-close]") || e.target===$("#dlg")) $("#dlg").close();
   });
   $("#refresh").addEventListener("click", fetchAll);
@@ -2023,10 +2228,10 @@ function init(){
   $("#npcMin").value = String(cfg.npcMin);
   $("#npcMin").addEventListener("change", e => { cfg.npcMin = +e.target.value; persist(); renderNpc(); });
   $("#shareLink").addEventListener("click", async ()=>{
-    const url = shareURL(), btn = $("#shareLink"), old = btn.textContent;
-    try{ await navigator.clipboard.writeText(url); btn.textContent = "✔ Lien copié"; }
-    catch(e){ location.hash = url.split("#")[1]; btn.textContent = "Lien dans la barre d'adresse"; }
-    setTimeout(()=>btn.textContent = old, 1800);
+    const url = shareURL(), lab = $("#shareLink span"), old = lab.textContent;
+    try{ await navigator.clipboard.writeText(url); lab.textContent = "Lien copié"; }
+    catch(e){ location.hash = url.split("#")[1]; lab.textContent = "Lien dans l'URL"; }
+    setTimeout(()=>lab.textContent = old, 1800);
   });
 
   npcReady = loadNpc();

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wolf of Sky — Charte graphique</title>
+<meta name="theme-color" content="#090B0E">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<style>
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:400;font-display:swap;src:url(fonts/IBMPlexSansCondensed-400.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:500;font-display:swap;src:url(fonts/IBMPlexSansCondensed-500.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:600;font-display:swap;src:url(fonts/IBMPlexSansCondensed-600.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:700;font-display:swap;src:url(fonts/IBMPlexSansCondensed-700.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/IBMPlexMono-400.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/IBMPlexMono-500.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/IBMPlexMono-600.woff2) format("woff2")}
+:root{
+  --bg:#090B0E;--s1:#0E1115;--s2:#131820;--s3:#19202A;--ln:#1D242D;--ln2:#2A323D;
+  --t1:#E4E8ED;--t2:#A0AAB6;--t3:#7D8794;
+  --ice:#8CC3EA;--ice2:#5E9CC6;--amb:#E5A13B;--pos:#2EBE87;--neg:#EE5A5A;--org:#E27A3F;--yel:#D8B34A;
+  --fs:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --fm:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--t1);font:14px/1.55 var(--fs);-webkit-font-smoothing:antialiased}
+a{color:var(--ice);text-decoration:none}a:hover{text-decoration:underline}
+main{max-width:1040px;margin:0 auto;padding:0 20px 80px}
+.top{display:flex;align-items:center;gap:12px;height:52px;border-bottom:1px solid var(--ln);max-width:1040px;margin:0 auto;padding:0 20px}
+.top svg{width:26px;height:26px}
+.top b{font-weight:700;letter-spacing:.15em;font-size:13px}.top b i{font-style:normal;color:var(--ice)}
+.top span{margin-left:auto;font:500 10.5px var(--fm);letter-spacing:.12em;color:var(--t3);text-transform:uppercase}
+h1{font-size:34px;line-height:1.1;font-weight:600;margin:44px 0 10px;letter-spacing:-.005em}
+.lead{max-width:640px;color:var(--t2);font-size:15px;margin:0}
+h2{font:600 10.5px var(--fs);letter-spacing:.16em;text-transform:uppercase;color:var(--t3);margin:56px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--ln);display:flex;gap:10px;align-items:center}
+h2::before{content:"";width:7px;height:7px;background:var(--ice)}
+.grid{display:grid;gap:1px;background:var(--ln);border:1px solid var(--ln)}
+.cell{background:var(--s1);padding:18px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.cap{font:600 9.5px var(--fs);letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:10px}
+p{margin:0 0 10px;color:var(--t2)}
+.big{display:grid;place-items:center;padding:40px}
+.big svg{width:170px;height:170px}
+.lock{display:flex;align-items:center;gap:14px}
+.lock svg{width:46px;height:46px}
+.lock b{display:block;font-weight:700;letter-spacing:.15em;font-size:24px;line-height:1.05}
+.lock b i{font-style:normal;color:var(--ice)}
+.lock small{display:block;margin-top:5px;font:500 10px var(--fm);letter-spacing:.14em;color:var(--t3)}
+.sizes{display:flex;align-items:flex-end;gap:22px}
+.inv{background:var(--ice);border:0}
+.inv .lock b,.inv .lock b i{color:#06131C}.inv .lock small{color:#28506b}
+.sw{height:84px;border:1px solid var(--ln2);margin-bottom:8px;display:flex;align-items:flex-end;padding:8px;font:600 11px var(--fm)}
+.tok{font:500 11px var(--fm);color:var(--t2)}
+.tok b{color:var(--t1);font-weight:600}
+.pal .cell{padding:12px}
+.spec .a{font-size:30px;font-weight:600;line-height:1.15}
+.spec .b{font-size:15px;color:var(--t2)}
+.mono{font-family:var(--fm)}
+.num{font:500 26px var(--fm)}
+table{border-collapse:collapse;width:100%;font:400 12px var(--fm);font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--ln)}
+th{font:600 10px var(--fs);letter-spacing:.1em;text-transform:uppercase;color:var(--t3);background:var(--s2)}
+th:first-child,td:first-child{text-align:left;font:600 13px var(--fs)}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.gold{color:var(--amb)}
+.btn{display:inline-flex;align-items:center;height:28px;padding:0 11px;background:var(--s2);border:1px solid var(--ln2);border-radius:3px;color:var(--t1);font:500 12.5px var(--fs)}
+.btn.p{background:var(--ice);border-color:var(--ice);color:#06131C;font-weight:600}
+.btn.g{background:transparent;border-color:transparent;color:var(--t2)}
+.tag{font:600 9.5px var(--fm);letter-spacing:.06em;padding:1px 5px;border:1px solid var(--ln2);color:var(--t2)}
+.badge{font:600 10.5px var(--fm);padding:0 6px;border:1px solid var(--ice2);color:var(--ice)}
+.risk{display:flex;align-items:center;gap:8px;margin:6px 0;font:600 11px var(--fm)}
+.risk i{display:block;width:120px;height:4px;background:var(--ln2);position:relative}
+.risk i b{position:absolute;inset:0 auto 0 0}
+.risk .l{width:80px}
+.warn{border-left:2px solid var(--amb);padding:7px 12px;background:rgba(229,161,59,.08);color:var(--t1)}
+.tip{border-left:2px solid var(--ice2);padding:7px 12px;background:rgba(140,195,234,.09);color:var(--t1);margin-top:8px}
+ul{margin:0;padding-left:18px;color:var(--t2)}li{margin:4px 0}
+.do li::marker{color:var(--pos)}.dont li::marker{color:var(--neg)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="logo" viewBox="0 0 32 32">
+    <path d="M3.5 1.5 L11.6 9.6 L16 6.2 L16 31 L9.6 25 L8.4 20.2 L1.6 19.2 L4.6 13.4 Z" fill="#6FA8D3"/>
+    <path d="M28.5 1.5 L20.4 9.6 L16 6.2 L16 31 L22.4 25 L23.6 20.2 L30.4 19.2 L27.4 13.4 Z" fill="#9CCBEE"/>
+    <path d="M9 14.6 L13.7 16.6 L12.9 18.3 L9 16.4 Z" fill="#E5A13B"/>
+    <path d="M23 14.6 L18.3 16.6 L19.1 18.3 L23 16.4 Z" fill="#E5A13B"/>
+    <path d="M14.3 26.4 L17.7 26.4 L16 28.9 Z" fill="#0B0E12"/>
+  </symbol>
+  <symbol id="logo-ink" viewBox="0 0 32 32">
+    <path d="M3.5 1.5 L11.6 9.6 L16 6.2 L16 31 L9.6 25 L8.4 20.2 L1.6 19.2 L4.6 13.4 Z" fill="#0B2233"/>
+    <path d="M28.5 1.5 L20.4 9.6 L16 6.2 L16 31 L22.4 25 L23.6 20.2 L30.4 19.2 L27.4 13.4 Z" fill="#153A55"/>
+    <path d="M9 14.6 L13.7 16.6 L12.9 18.3 L9 16.4 Z" fill="#8CC3EA"/>
+    <path d="M23 14.6 L18.3 16.6 L19.1 18.3 L23 16.4 Z" fill="#8CC3EA"/>
+    <path d="M14.3 26.4 L17.7 26.4 L16 28.9 Z" fill="#8CC3EA"/>
+  </symbol>
+</defs></svg>
+
+<div class="top">
+  <svg aria-hidden="true"><use href="#logo"/></svg><b>WOLF <i>OF</i> SKY</b>
+  <span>Charte graphique · v1</span>
+</div>
+
+<main>
+  <h1>Un terminal de marché,<br>pas un jeu de cartes.</h1>
+  <p class="lead">Wolf of Sky sert à repérer vite un flip et à juger son risque. L'interface est dense, silencieuse et lisible en un coup d'œil : graphite quasi noir, filets d'un pixel, chiffres à chasse fixe. La couleur ne décore pas, elle signale.</p>
+
+  <h2>Logo</h2>
+  <div class="grid g2">
+    <div class="cell big"><svg aria-hidden="true"><use href="#logo"/></svg></div>
+    <div class="cell">
+      <div class="cap">Le concept</div>
+      <p>Une tête de loup facettée, vue de face. <b style="color:var(--t1)">La ligne de crête (oreille, front, oreille) dessine un W</b> : le « W » de Wolf, qui se lit aussi comme un motif de courbe de prix. Deux plans de lumière donnent le volume ; les pointes sur les joues forment la collerette.</p>
+      <p>Les yeux sont en <b style="color:var(--amb)">ambre</b>, la couleur de signal de l'interface : le loup « regarde » les prix.</p>
+      <div class="cap" style="margin-top:18px">Construction</div>
+      <p class="tok">Grille 32 × 32 · 2 plans + 3 accents · aucun dégradé ni contour · lisible dès <b>16 px</b>.</p>
+    </div>
+    <div class="cell">
+      <div class="cap">Signature horizontale</div>
+      <div class="lock"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>WOLF <i>OF</i> SKY</b><small>BAZAAR TERMINAL</small></div></div>
+    </div>
+    <div class="cell inv">
+      <div class="cap" style="color:#28506b">Version claire</div>
+      <div class="lock"><svg aria-hidden="true"><use href="#logo-ink"/></svg><div><b>WOLF <i>OF</i> SKY</b><small>BAZAAR TERMINAL</small></div></div>
+    </div>
+    <div class="cell">
+      <div class="cap">Tailles minimales</div>
+      <div class="sizes">
+        <svg width="64" height="64" aria-hidden="true"><use href="#logo"/></svg>
+        <svg width="32" height="32" aria-hidden="true"><use href="#logo"/></svg>
+        <svg width="24" height="24" aria-hidden="true"><use href="#logo"/></svg>
+        <svg width="16" height="16" aria-hidden="true"><use href="#logo"/></svg>
+      </div>
+      <p class="tok" style="margin-top:10px">Mot-symbole : ne pas descendre sous 13 px de corps. Zone de protection : la hauteur de l'œil autour de la marque.</p>
+    </div>
+    <div class="cell">
+      <div class="cap">Wordmark</div>
+      <p class="tok">IBM Plex Sans Condensed <b>700</b> · majuscules · interlettrage <b>0,15 em</b> · « OF » en glace <b>#8CC3EA</b>.<br>Sous-titre en IBM Plex Mono 500, interlettrage 0,14 em, gris <b>#7D8794</b>.</p>
+    </div>
+  </div>
+
+  <h2>Palette « ardoise »</h2>
+  <div class="grid g3 pal">
+    <div class="cell"><div class="sw" style="background:#090B0E">#090B0E</div><div class="tok"><b>Canvas</b> · fond de page</div></div>
+    <div class="cell"><div class="sw" style="background:#0E1115">#0E1115</div><div class="tok"><b>Surface 1</b> · panneaux, cartes</div></div>
+    <div class="cell"><div class="sw" style="background:#131820">#131820</div><div class="tok"><b>Surface 2</b> · en-têtes, survol</div></div>
+    <div class="cell"><div class="sw" style="background:#1D242D">#1D242D</div><div class="tok"><b>Filet</b> · séparateurs 1 px</div></div>
+    <div class="cell"><div class="sw" style="background:#2A323D">#2A323D</div><div class="tok"><b>Filet fort</b> · champs, boutons</div></div>
+    <div class="cell"><div class="sw" style="background:#E4E8ED;color:#0E1115">#E4E8ED</div><div class="tok"><b>Texte</b> · principal</div></div>
+    <div class="cell"><div class="sw" style="background:#A0AAB6;color:#0E1115">#A0AAB6</div><div class="tok"><b>Texte 2</b> · secondaire</div></div>
+    <div class="cell"><div class="sw" style="background:#7D8794;color:#0E1115">#7D8794</div><div class="tok"><b>Texte 3</b> · libellés (contraste 5:1)</div></div>
+    <div class="cell"><div class="sw" style="background:#8CC3EA;color:#06131C">#8CC3EA</div><div class="tok"><b>Glace</b> · marque, sélection, actions</div></div>
+    <div class="cell"><div class="sw" style="background:#E5A13B;color:#1B1204">#E5A13B</div><div class="tok"><b>Ambre</b> · signal : chiffre clé, alerte, direct</div></div>
+    <div class="cell"><div class="sw" style="background:#2EBE87;color:#04170F">#2EBE87</div><div class="tok"><b>Gain</b> · toujours avec « + »</div></div>
+    <div class="cell"><div class="sw" style="background:#EE5A5A;color:#1D0606">#EE5A5A</div><div class="tok"><b>Perte</b> · toujours avec « − »</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="cell">
+      <div class="cap">Échelle de risque</div>
+      <div class="risk"><span class="l" style="color:var(--pos)">Faible</span><i><b style="width:14%;background:var(--pos)"></b></i>0 – 24</div>
+      <div class="risk"><span class="l" style="color:var(--yel)">Modéré</span><i><b style="width:38%;background:var(--yel)"></b></i>25 – 44</div>
+      <div class="risk"><span class="l" style="color:var(--org)">Élevé</span><i><b style="width:62%;background:var(--org)"></b></i>45 – 64</div>
+      <div class="risk"><span class="l" style="color:var(--neg)">Très élevé</span><i><b style="width:88%;background:var(--neg)"></b></i>65 – 100</div>
+    </div>
+    <div class="cell">
+      <div class="cap">Règles d'usage</div>
+      <ul class="do">
+        <li>Une seule teinte de marque (glace) ; l'ambre reste rare pour garder sa valeur d'alerte.</li>
+        <li>Vert et rouge <b style="color:var(--t1)">uniquement</b> pour gain / perte et pour l'échelle de risque, jamais en décoration.</li>
+        <li>Aucune information portée par la couleur seule : signe +/−, libellé ou forme l'accompagne.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Typographie</h2>
+  <div class="grid g2 spec">
+    <div class="cell">
+      <div class="cap">Interface · IBM Plex Sans Condensed</div>
+      <div class="a">Meilleur choix, capital 5.00M</div>
+      <div class="b">400 · 500 · 600 · 700 — titres, libellés, texte courant. Condensée : elle laisse de la place aux colonnes de données.</div>
+    </div>
+    <div class="cell">
+      <div class="cap">Données · IBM Plex Mono</div>
+      <div class="num">2 250 246,5 → 2 520 011,5</div>
+      <div class="b" style="margin-top:8px">400 · 500 · 600 — tous les chiffres, en <b class="mono" style="color:var(--t1)">chasse fixe et tabulaires</b> : les colonnes s'alignent au dixième de coin près.</div>
+    </div>
+    <div class="cell">
+      <div class="cap">Libellés</div>
+      <div style="font:600 10px var(--fs);letter-spacing:.12em;text-transform:uppercase;color:var(--t3)">Profit estimé par heure · Marge nette</div>
+      <p class="tok" style="margin-top:8px">Condensée 600, 10 px, majuscules, interlettrage 0,12 em, gris <b>#7D8794</b>.</p>
+    </div>
+    <div class="cell">
+      <div class="cap">Hiérarchie</div>
+      <p class="tok">Titre de volet <b>15 / 600</b> · nom d'item <b>13 / 600</b> · donnée <b>12 mono</b> · chiffre clé <b>15 mono</b> · libellé <b>10 / 600 caps</b>.</p>
+    </div>
+  </div>
+
+  <h2>Composants</h2>
+  <div class="grid g2">
+    <div class="cell">
+      <div class="cap">Boutons · étiquettes</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="btn p">Suivre ce flip</span><span class="btn">Modifier le prix</span><span class="btn g">Partager</span>
+        <span class="tag">SPK</span><span class="tag">JAC</span><span class="badge">3</span>
+      </div>
+      <p class="tok" style="margin-top:12px">Angles à <b>3 px</b>, pas d'ombre, pas de dégradé. Un événement est désigné par un code de 3 lettres (SPK, JRY, JAC…), jamais par un emoji.</p>
+    </div>
+    <div class="cell">
+      <div class="cap">Alertes</div>
+      <div class="warn">Plafond quotidien : ≈ <b>500M</b> de coins par jour.</div>
+      <div class="tip">Achète 1 unité pour tester avant de miser gros.</div>
+    </div>
+    <div class="cell" style="grid-column:1/-1">
+      <div class="cap">Ligne de données</div>
+      <table>
+        <thead><tr><th>Item</th><th>Achat → Vente</th><th>Marge nette</th><th>Volume /h</th><th>Profit /h</th></tr></thead>
+        <tbody>
+          <tr><td>Flawless Sapphire Gemstone</td><td>2.25M → 2.52M</td><td class="pos">+10.6 %</td><td>55.3 · 108</td><td class="gold">1.74M</td></tr>
+          <tr><td>Enchanted Cookie</td><td>71.4k → 76.8k</td><td class="pos">+6.2 %</td><td>3 012 · 4 000</td><td class="gold">1.50M</td></tr>
+          <tr><td>Revenant Flesh</td><td>80.5 → 85.6</td><td class="neg">−1.4 %</td><td>317.4k · 15.7k</td><td>–</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Principes</h2>
+  <div class="grid g2">
+    <div class="cell">
+      <div class="cap">À faire</div>
+      <ul class="do">
+        <li>Densité : 6 px de padding vertical par ligne, le tableau est l'écran.</li>
+        <li>Une info, un emplacement : les mêmes indicateurs, aux mêmes endroits.</li>
+        <li>Détail dans un panneau latéral (inspecteur), sans perdre la liste.</li>
+        <li>Des icônes au trait de 1,6 px, seulement pour les actions familières.</li>
+      </ul>
+    </div>
+    <div class="cell">
+      <div class="cap">À éviter</div>
+      <ul class="dont">
+        <li>Dégradés, halos, ombres portées, verre dépoli.</li>
+        <li>Cartes dans des cartes, gros arrondis, pastilles partout.</li>
+        <li>Emojis dans l'interface, texte marketing dans un outil.</li>
+        <li>Vert / rouge pour autre chose qu'un gain, une perte ou un risque.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+</body>
+</html>

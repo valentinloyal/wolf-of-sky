@@ -1,4 +1,9 @@
-# 🐺 Wolf of Sky — Bazaar Flipper
+<img src="logo.svg" alt="Wolf of Sky" width="84" align="left">
+
+# Wolf of Sky
+**Bazaar Terminal** pour Hypixel SkyBlock
+
+<br clear="left">
 
 Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton budget, avec un score de risque.
 
@@ -16,6 +21,10 @@ Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton b
 - **Favoris** ⭐ : surveille des items même hors filtres, avec statut et notification quand un favori devient rentable
 - Prix d'ordres à 0,1 coin près, lien de partage des réglages, affichage en cartes sur mobile
 - Plan de répartition du budget sur plusieurs items, guide débutant
+
+## Direction artistique
+Un terminal de marché plutôt qu'un jeu de cartes : graphite quasi noir, filets d'un pixel, chiffres à chasse fixe (IBM Plex Mono), interface en IBM Plex Sans Condensed. Couleur = signal : glace pour la marque, ambre pour l'alerte, vert / rouge réservés au gain / perte. Le détail d'un item s'ouvre dans un panneau latéral.
+Charte complète (logo, palette, typographie, composants) : [`brand.html`](brand.html), aussi publiée sur le site (lien « Charte graphique »).
 
 ## Idées à venir
 Voir [ROADMAP.md](ROADMAP.md) : liste d'ajouts potentiels notés par utilité et difficulté.
