@@ -139,6 +139,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .evstatus{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;white-space:nowrap;color:var(--gold)}
 .evstatus.live{color:var(--orange);border-color:var(--orange)}
 .evline{margin:8px 0 12px}
+.sellt{color:var(--blue);font-weight:600}
 
 /* guide */
 .guide{display:grid;gap:14px;max-width:900px}
@@ -251,7 +252,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <th data-sort="roi">Marge nette</th>
         <th data-sort="flow">Volume /h</th>
         <th data-sort="invested">Quantité · investi</th>
-        <th data-sort="tHours">Durée cycle</th>
+        <th data-sort="tHours">Durée cycle · vente</th>
         <th data-sort="pph">Profit /h</th>
         <th data-sort="profit">Profit /cycle</th>
         <th data-sort="risk">Risque</th>
@@ -331,7 +332,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <li><b>Marge nette</b> : gain par unité après taxe, en % de ce que tu as investi.</li>
         <li><b>Volume /h</b> : nombre d'unités vendues en instantané / achetées en instantané par heure (moyenne des 7 derniers jours ÷ 168). Ce sont ces transactions instantanées qui remplissent tes ordres.</li>
         <li><b>Quantité · investi</b> : combien d'unités acheter avec ton budget, plafonné pour que l'achat + la revente tiennent dans la durée de cycle choisie.</li>
-        <li><b>Durée cycle</b> : temps estimé pour remplir ton achat puis ta vente (en supposant que tu captes seulement une part du marché).</li>
+        <li><b>Durée cycle · vente</b> : temps estimé pour remplir ton achat puis ta vente (15 min minimum : le temps de gérer tes ordres), avec en dessous le <b>temps estimé pour vendre</b> seul. Il dépend du nombre d'achats instantanés par heure sur l'item et de la part du marché que tu captes : plus la concurrence est forte, plus c'est long.</li>
         <li><b>Profit /h</b> : profit du cycle ÷ durée. C'est le critère « argent rapide ».</li>
         <li><b>Tri par défaut</b> : le tableau est classé par « profit /h ajusté au risque » (le profit est fortement réduit quand le risque monte), pour ne pas te pousser vers des flips lucratifs mais piégeux. Clique sur « Profit /h » pour classer par gain brut.</li>
       </ul>
@@ -351,7 +352,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
     <div class="card">
       <h3>Événements SkyBlock : comment ils influencent les prix</h3>
-      <p>SkyBlock a son propre calendrier (1 jour = 20 min réelles, 1 année = 124 h). Des événements comme le <b>Spooky Festival</b> (29-31 Automne, ≈ 1 h réelle tous les 5 jours) créent une demande ou une offre soudaine : les monstres lâchent des bonbons, les gens achètent ou vendent en masse.</p>
+      <p>SkyBlock a son propre calendrier (1 jour = 20 min réelles, 1 année = 124 h). Le <b>Jacob's Farming Contest</b> revient toutes les heures (à hh:15 UTC, 20 min). Des événements plus rares comme le <b>Spooky Festival</b> (29-31 Automne, ≈ 1 h réelle tous les 5 jours) créent une demande ou une offre soudaine : les monstres lâchent des bonbons, les gens achètent ou vendent en masse.</p>
       <p>Plutôt que de deviner, la page <b>mesure</b> l'effet sur l'historique réel : pour chaque occurrence passée, elle regarde le pic de prix le jour J, la veille et J+2 par rapport aux jours d'avant, et compare avec des « faux événements » (mêmes mesures à des dates sans événement). Un effet n'est affiché que s'il est net (≥ 4-6 %) <i>et</i> cohérent (≥ 65 % des occurrences vont dans le même sens).</p>
       <div class="tip">Exemple mesuré sur ~50 occurrences : le <b>Green Candy</b> monte en pic d'environ <b>+17 %</b> (médiane) le jour du festival, contre +0,3 % un jour normal, puis revient à la normale en 2 jours. C'est un pic <i>bref</i> : vendre pendant l'événement est plus malin qu'acheter.</div>
       <div class="warn">Limites : l'historique est quotidien (un événement d'1 h est lissé dans la journée), les pics réels sont donc souvent plus courts et plus forts que ce qui est affiché. Les événements longs (Hoppity's Hunt, Harvest Feast) et le Dark Auction / Jacob's Contest ne sont pas mesurés. Les perks du maire sont affichés à titre d'information.</div>
@@ -677,17 +678,34 @@ const EVENTS = [
    desc:"Oringo le zoologue itinérant vient échanger des pets (2 passages par année SkyBlock)."},
   {key:"election",icon:"🗳️", name:"Ouverture des élections",starts:[[2,27],[5,27]],days:1,  seed:[], ctrl:SB_YEAR/4,
    desc:"Le vote pour le prochain maire s'ouvre (les perks du maire peuvent faire bouger certains prix)."},
+  // Un concours démarre tous les 3 jours SkyBlock (= toutes les heures réelles, à hh:15 UTC), 2e jour de l'année, et dure 1 jour SkyBlock (20 min).
+  // Vérifié sur les 124 concours de l'année 515 (planning communautaire) : écart constant de 3600 s, décalage de 1200 s après le début d'année.
+  {key:"jacob",   icon:"🧑‍🌾", name:"Jacob's Farming Contest", periodic:{offset:SB_DAY, period:3*SB_DAY}, days:1, seed:[], noStat:true,
+   desc:"Concours de farming : 3 cultures sont tirées au sort et les meilleurs récoltants gagnent des médailles. Un concours démarre toutes les heures réelles et dure 20 minutes."},
   {key:"hoppity", icon:"🐰", name:"Hoppity's Hunt",        starts:[[0,1]],          days:93, seed:[], long:true,
    desc:"Chasse aux lapins en chocolat pendant tout le printemps SkyBlock."},
   {key:"harvest", icon:"🌾", name:"Harvest Feast",         starts:[[6,1]],          days:93, seed:[], long:true,
    desc:"Les cultures de saison donnent des ingrédients spéciaux pendant tout l'automne SkyBlock."}
 ];
+const measurable = ev => !ev.long && !ev.noStat;
 function evStarts(ev, from, to){
+  if(ev.periodic){
+    const {offset, period} = ev.periodic, out = [];
+    for(let n = Math.ceil((from-SB_EPOCH-offset)/period); SB_EPOCH+offset+n*period <= to; n++) out.push(SB_EPOCH+offset+n*period);
+    return out;
+  }
   const y0 = Math.floor((from-SB_EPOCH)/SB_YEAR)+1, y1 = Math.floor((to-SB_EPOCH)/SB_YEAR)+1, out = [];
   for(let y=y0-1; y<=y1+1; y++) for(const [m,d] of ev.starts){ const s = sbTime(y,m,d); if(s>=from && s<=to) out.push(s); }
   return out.sort((a,b)=>a-b);
 }
 function evNext(ev, now){
+  if(ev.periodic){
+    const {offset, period} = ev.periodic, dur = ev.days*SB_DAY;
+    let s = SB_EPOCH + offset + Math.floor((now-SB_EPOCH-offset)/period)*period;
+    if(now < s+dur) return {start:s, end:s+dur, live:true};
+    s += period;
+    return {start:s, end:s+dur, live:false};
+  }
   const dur = ev.days*SB_DAY, list = evStarts(ev, now-dur-SB_YEAR, now+2*SB_YEAR);
   const cur = list.find(s=>now>=s && now<s+dur);
   if(cur) return {start:cur, end:cur+dur, live:true};
@@ -706,7 +724,7 @@ const fmtLocal = t => new Date(t).toLocaleString("fr-FR",{weekday:"short",day:"n
 // Pour chaque occurrence passée : pic de prix le jour J, prix la veille, prix à J+2, comparés au prix des jours J-4..J-2.
 // Le tout est comparé à des dates « témoins » (mêmes mesures, décalées d'un demi-cycle) pour ne pas confondre avec le bruit habituel.
 function eventEffect(daily, ev){
-  if(ev.long || !daily || daily.length < 60) return null;
+  if(!measurable(ev) || !daily || daily.length < 60) return null;
   const find = t => {
     let lo = 0, hi = daily.length-1;
     while(lo <= hi){ const m = (lo+hi)>>1, p = daily[m]; if(t < p.t) hi = m-1; else if(t >= p.t+DAY_MS) lo = m+1; else return p; }
@@ -737,7 +755,7 @@ function eventEffect(daily, ev){
 function getEffects(id){
   const c = extCache[id];
   if(!c || !c.daily) return null;
-  if(!c.evfx){ c.evfx = {}; for(const ev of EVENTS) if(!ev.long) c.evfx[ev.key] = eventEffect(c.daily, ev); }
+  if(!c.evfx){ c.evfx = {}; for(const ev of EVENTS) if(measurable(ev)) c.evfx[ev.key] = eventEffect(c.daily, ev); }
   return c.evfx;
 }
 // événement (avec effet mesuré) qui est imminent, en cours ou vient de se terminer pour cet item
@@ -774,7 +792,7 @@ const seedLoading = new Set();
 async function ensureSeeds(all){
   const now = Date.now(), ids = new Set();
   for(const ev of EVENTS){
-    if(ev.long || !ev.seed.length) continue;
+    if(!measurable(ev) || !ev.seed.length) continue;
     const n = evNext(ev, now);
     if(all || n.live || n.start-now < 24*3600e3) ev.seed.forEach(i=>ids.add(i));
   }
@@ -796,7 +814,7 @@ function itemLabel(id){ const b = bases.find(x=>x.id===id); return b ? b.name : 
 function evBadge(b){
   const now = Date.now(); let out = "";
   for(const ev of EVENTS){
-    if(ev.long) continue;
+    if(!measurable(ev)) continue;
     const fx = extCache[b.id] && extCache[b.id].evfx && extCache[b.id].evfx[ev.key];
     if(!(ev.seed.includes(b.id) || (fx && (fx.spike.flag || fx.pre.flag)))) continue;
     const n = evNext(ev, now), dt = n.start-now;
@@ -819,7 +837,7 @@ async function loadMayor(){
 function renderStrip(){
   const el = $("#evStrip"); if(!el) return;
   const now = Date.now();
-  const list = EVENTS.filter(e=>!e.long).map(ev=>({ev, ...evNext(ev, now)})).sort((a,b)=>(b.live-a.live)||(a.start-b.start)).slice(0,3);
+  const list = EVENTS.filter(measurable).map(ev=>({ev, ...evNext(ev, now)})).sort((a,b)=>(b.live-a.live)||(a.start-b.start)).slice(0,3);
   el.innerHTML = `<span class="mut">📅 Événements :</span> ` + list.map(x=>
     `<a href="#" data-gocal="1" class="evchip ${x.live?"live":""}">${x.ev.icon} ${esc(x.ev.name)} <b class="cd" data-t="${x.live?x.end:x.start}" data-live="${x.live?1:0}">${x.live?"en cours":"dans "+fmtCountdown(x.start-now)}</b></a>`).join("");
 }
@@ -862,11 +880,13 @@ function renderCalendar(){
     return `<div class="card evcard ${live?"live":""}">
       <div class="evhead"><span class="evicon">${ev.icon}</span>
         <div style="flex:1"><h3 style="margin:0">${esc(ev.name)}</h3>
-          <div class="mut" style="font-size:12.5px">${ev.starts.map(([m,d])=>`${d} ${SB_MONTHS[m]}`).join(" & ")} · ${ev.days>=93?"toute la saison":ev.days+" j SkyBlock"} ≈ ${realDur} réelle${long?"s":""}</div></div>
+          <div class="mut" style="font-size:12.5px">${ev.periodic ? "Toutes les heures réelles (tous les 3 j SkyBlock)" : ev.starts.map(([m,d])=>`${d} ${SB_MONTHS[m]}`).join(" & ")} · ${ev.days>=93?"toute la saison":ev.days+" j SkyBlock"} ≈ ${realDur} réelle${long?"s":""}</div></div>
         <span class="evstatus ${live?"live":""}"><span class="cd" data-t="${live?end:start}" data-live="${live?1:0}">${live?"en cours":"dans "+fmtCountdown(start-now)}</span></span>
       </div>
       <p style="margin:6px 0">${esc(ev.desc)}</p>
       <div class="mut" style="font-size:12.5px">${live?"Depuis":"Prochaine occurrence :"} <b>${fmtLocal(start)}</b> → ${fmtLocal(end)} <span class="mut">(heure locale)</span></div>
+      ${ev.periodic ? `<div class="mut" style="font-size:12.5px;margin-top:4px">Ensuite : ${[1,2,3,4].map(k=>new Date(start+k*ev.periodic.period).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})).join(" · ")}. Un concours démarre à chaque heure pile + 15 min (UTC).</div>
+        <div class="note" style="margin:8px 0 0">Les <b>3 cultures</b> de chaque concours sont tirées au sort et communiquées à l'avance : consulte le menu de Jacob en jeu ou un suivi communautaire comme <a href="https://jacobs.strassburger.dev/" target="_blank" rel="noopener">jacobs.strassburger.dev</a> (données collectées par la communauté). Comme il y a un concours toutes les heures, son effet sur les prix ne peut pas être isolé de manière fiable avec l'historique quotidien : je ne l'ai donc pas mesuré.</div>`:""}
       ${seeds ? `<div style="margin-top:8px"><div class="mut" style="font-size:12px">Items à surveiller (effet mesuré sur l'historique réel) :</div><ul class="reasons" style="margin-top:4px">${seeds}</ul></div>`:""}
       ${long ? `<div class="note" style="margin:6px 0 0">Événement de longue durée : pas de mesure automatique, mais l'offre et la demande de certains items peuvent changer pendant toute la période.</div>`:""}
     </div>`;
@@ -1019,7 +1039,7 @@ function rowHTML(d,i){
     <td class="pos" title="+${full(d.net)} coins/unité après taxe">+${(d.roi*100).toFixed(1)} %</td>
     <td class="mut" title="Ventes instantanées /h (remplit ton achat) · Achats instantanés /h (remplit ta vente)">${fmt(b.is)} · ${fmt(b.ib)}</td>
     <td title="${d.units.toLocaleString("fr-FR")} unités — limité par le ${d.limitedBy}">${d.units.toLocaleString("fr-FR")} <span class="mut">· ${fmt(d.invested)}</span></td>
-    <td>${fmtDur(d.tHours)}</td>
+    <td title="Achat ≈ ${fmtDur(d.tBuy)} puis vente ≈ ${fmtDur(d.tSell)} (en captant ${(cfg.share*100).toFixed(0)} % du marché)">${fmtDur(d.tHours)}<div class="iid">vente <b class="sellt">≈ ${fmtDur(d.tSell)}</b></div></td>
     <td class="gold" title="${full(d.pph)} coins/h"><b>${fmt(d.pph)}</b></td>
     <td class="pos" title="${full(d.profit)} coins">${fmt(d.profit)}</td>
     <td>${riskHTML(d.risk)}</td>
@@ -1037,6 +1057,7 @@ function renderHero(rows){
     <div class="hero-grid">
       <div class="kpi"><b class="gold">${fmt(top.pph)} /h</b><span>profit estimé par heure</span></div>
       <div class="kpi"><b>${fmt(top.profit)}</b><span>profit par cycle (${fmtDur(top.tHours)})</span></div>
+      <div class="kpi"><b>≈ ${fmtDur(top.tSell)}</b><span>temps estimé pour vendre (achat ≈ ${fmtDur(top.tBuy)})</span></div>
       <div class="kpi"><b>${top.units.toLocaleString("fr-FR")} × ${fmt(b.entry)}</b><span>quantité × prix d'achat</span></div>
       <div class="kpi"><b>${(top.roi*100).toFixed(1)} %</b><span>marge nette après taxe</span></div>
     </div>
@@ -1083,7 +1104,7 @@ function renderPlan(){
       <tbody>${picks.map((d,i)=>`<tr data-id="${esc(d.b.id)}"><td class="rank">${i+1}</td>
         <td><div class="iname">${esc(d.b.name)}</div><div class="iid">${esc(d.b.id)}</div></td>
         <td>${fmt(d.b.entry)} → ${fmt(d.b.exit)}</td>
-        <td>${d.units.toLocaleString("fr-FR")}</td><td>${fmt(d.invested)}</td><td>${fmtDur(d.tHours)}</td>
+        <td>${d.units.toLocaleString("fr-FR")}</td><td>${fmt(d.invested)}</td><td title="Achat ≈ ${fmtDur(d.tBuy)} puis vente ≈ ${fmtDur(d.tSell)} (en captant ${(cfg.share*100).toFixed(0)} % du marché)">${fmtDur(d.tHours)}<div class="iid">vente <b class="sellt">≈ ${fmtDur(d.tSell)}</b></div></td>
         <td class="gold"><b>${fmt(d.pph)}</b></td><td>${riskHTML(d.risk)}</td></tr>`).join("")}</tbody>
     </table></div>
     <p class="note">Chaque item est limité à ${(capShare*100).toFixed(0)} % de ton budget pour limiter la concentration.</p>`;
@@ -1250,7 +1271,8 @@ function openDetail(id){
       <div class="hero-grid" style="margin:0">
         <div class="kpi"><b class="gold">${fmt(d.pph)} /h</b><span>profit estimé /heure</span></div>
         <div class="kpi"><b class="pos">${fmt(d.profit)}</b><span>profit par cycle</span></div>
-        <div class="kpi"><b>${fmtDur(d.tHours)}</b><span>durée estimée (${fmtDur(d.tBuy)} achat + ${fmtDur(d.tSell)} vente)</span></div>
+        <div class="kpi"><b>≈ ${fmtDur(d.tSell)}</b><span>temps estimé pour vendre · entre ${fmtDur(d.units/(b.ib*0.35))} et ${fmtDur(d.units/(b.ib*0.10))} selon la concurrence</span></div>
+        <div class="kpi"><b>${fmtDur(d.tHours)}</b><span>cycle complet : achat ≈ ${fmtDur(d.tBuy)} + vente ≈ ${fmtDur(d.tSell)}</span></div>
         <div class="kpi"><b>${(d.roi*100).toFixed(1)} %</b><span>marge nette</span></div>
         ${mph}
       </div>
@@ -1264,7 +1286,8 @@ function openDetail(id){
               → coût total <b>≈ ${full(d.invested)}</b> coins. <span class="mut">(le prix est +0,1 au-dessus du meilleur ordre d'achat actuel, ${full(b.bidTop)})</span></li>
           <li>Attends que l'ordre se remplisse (≈ ${fmtDur(d.tBuy)}), puis récupère les items (<i>Claim</i>). Tu peux le remplir en plusieurs fois.</li>
           <li><b>Create Sell Offer</b> : prix <code>${full(b.exit)}</code> coins/unité <span class="mut">(−0,1 sous la meilleure offre actuelle, ${full(b.askTop)})</span>.
-              Tu recevras <b>≈ ${full(recv)}</b> coins après taxe de ${(cfg.tax*100).toString().replace(".",",")} %.</li>
+              Tu recevras <b>≈ ${full(recv)}</b> coins après taxe de ${(cfg.tax*100).toString().replace(".",",")} %.
+              Compte <b>≈ ${fmtDur(d.tSell)}</b> pour tout vendre <span class="mut">(≈ ${fmt(b.ib)} achats instantanés /h sur cet item, dont tu captes ${(cfg.share*100).toFixed(0)} %)</span>.</li>
           <li>Profit net attendu : <b class="pos">+${full(d.profit)}</b> coins. Vérifie de temps en temps que tes ordres sont toujours en tête, sinon ajuste de 0,1.</li>
         </ol>
         <div class="warn" style="margin-top:12px">Les prix ont quelques dizaines de secondes de retard : <b>vérifie le carnet en jeu</b> avant de valider.
