@@ -1,0 +1,21 @@
+name: Tests
+
+# Tests sur les pull requests et les branches autres que main
+# (sur main, ils sont lancés par « Déployer le site », qui bloque la publication en cas d'échec).
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node --test

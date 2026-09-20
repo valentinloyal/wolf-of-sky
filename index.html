@@ -758,11 +758,12 @@ const price = n => r1(n).toLocaleString("fr-FR",{minimumFractionDigits:0,maximum
 const full = n => Math.round(n*10)/10 >= 1e3 ? Math.round(n).toLocaleString("fr-FR") : String(r1(n)).replace(".",",");
 function fmtDur(h){
   if(h < 1/60) return "< 1 min";
-  if(h < 1) return Math.round(h*60)+" min";
+  const m = Math.round(h*60);
+  if(m < 60) return m+" min";                       // 59,6 min -> "1 h", pas "60 min"
   return (Math.round(h*10)/10).toString().replace(".",",")+" h";
 }
 function parseMoney(str){
-  const m = String(str).trim().toLowerCase().replace(/\s/g,"").replace(",",".").match(/^([\d.]+)([kmb]?)$/);
+  const m = String(str).trim().toLowerCase().replace(/\s/g,"").replace(",",".").match(/^(\d+(?:\.\d*)?|\.\d+)([kmb]?)$/);   // un seul point décimal ("5." reste valide : saisie en cours)
   if(!m) return NaN;
   const mult = {"":1,k:1e3,m:1e6,b:1e9}[m[2]];
   return parseFloat(m[1])*mult;
@@ -2482,7 +2483,7 @@ function bindSel(sel, key){
   el.addEventListener("change", ()=>{ cfg[key] = +el.value; persist(); render(); });
 }
 function persist(){ if(cfg.budget > 0) saveJSON(SKEY, cfg); }
-init();
+if(!globalThis.__WOS_TEST__) init();   // les tests chargent ce script sans démarrer l'interface
 </script>
 </body>
 </html>

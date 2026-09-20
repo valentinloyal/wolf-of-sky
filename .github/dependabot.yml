@@ -1,0 +1,11 @@
+# Propose une mise à jour des actions GitHub quand une nouvelle version sort,
+# pour ne plus découvrir des mois plus tard que le workflow est en retard (avertissement Node 20, Ubuntu 26…).
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns: ["*"]

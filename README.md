@@ -24,6 +24,25 @@ Outil pour trouver les meilleurs flips du Bazaar de Hypixel SkyBlock selon ton b
 - Prix d'ordres à 0,1 coin près, lien de partage des réglages, affichage en cartes sur mobile
 - Plan de répartition du budget sur plusieurs items, guide débutant
 
+## Tests
+```
+node --test
+```
+Aucune dépendance (Node 20+ suffit, pas de `npm install`). Les tests chargent le **vrai script de `index.html`** dans un navigateur factice : ils testent le code qui est déployé, pas une copie.
+
+| Fichier | Ce qui est vérifié |
+|---|---|
+| `format` | formats de nombres, durées, montants saisis (`5m`, `1,5k`…), noms de livres d'enchantement |
+| `model` | prix d'ordres (+0,1 / −0,1), profit, quantités, durées, **score de risque comparé à sa formule documentée sur 720 combinaisons**, filtres |
+| `calendar` | calendrier SkyBlock (constantes du wiki), Spooky Festival, Jacob's Contest, mesure des effets d'événements |
+| `npc` | flips PNJ (instantané et par ordre), plafond quotidien |
+| `backup` | export / import : validation stricte, fichiers piégés, pollution de prototype, fusion / remplacement |
+| `ui-logic` | conseils du suivi, statuts des favoris, profils de risque, lien de partage |
+| `integrity` | identifiants dupliqués, icônes manquantes, emojis, polices, fichiers publiés par le workflow |
+| `scripts` | lecture des deux sources du planning Jacob, filtrage des prix PNJ |
+
+Le déploiement est **conditionné aux tests** : si l'un échoue, le site en ligne n'est pas remplacé. Dependabot propose chaque mois la mise à jour des actions GitHub.
+
 ## Direction artistique
 Un terminal de marché plutôt qu'un jeu de cartes : graphite quasi noir, filets d'un pixel, chiffres à chasse fixe (IBM Plex Mono), interface en IBM Plex Sans Condensed. Couleur = signal : glace pour la marque, ambre pour l'alerte, vert / rouge réservés au gain / perte. Le détail d'un item s'ouvre dans un panneau latéral.
 Charte complète (logo, palette, typographie, composants) : [`brand.html`](brand.html), aussi publiée sur le site (lien « Charte graphique »).

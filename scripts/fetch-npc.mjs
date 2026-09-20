@@ -1,7 +1,8 @@
 // Extrait les prix de revente au PNJ des items vendus au Bazaar et les écrit en JSON sur stdout.
 // Exécuté côté serveur par le workflow GitHub Actions : le fichier source d'Hypixel fait ~5 Mo, on n'en garde que
-// l'essentiel (~50 Ko) pour que la page reste légère.
-//   npc_sell_price = ce que le PNJ paie pour une unité de l'item (aucune taxe, contrairement au Bazaar).
+// l'essentiel (~40 Ko) pour que la page reste légère.
+// La logique (filtrage, contrôle de vraisemblance) est dans lib/npc.mjs et testée.
+import { buildNpcItems } from "./lib/npc.mjs";
 
 const ITEMS = "https://api.hypixel.net/v2/resources/skyblock/items";
 const BAZAAR = "https://api.hypixel.net/skyblock/bazaar";
@@ -15,11 +16,7 @@ const get = async url => {
 let out = { generatedAt: Date.now(), items: {} };
 try {
   const [items, bazaar] = await Promise.all([get(ITEMS), get(BAZAAR)]);
-  if (!items.success || !bazaar.success) throw new Error("réponse Hypixel invalide");
-  for (const it of items.items) {
-    if (it.npc_sell_price > 0 && bazaar.products[it.id]) out.items[it.id] = { n: it.name, p: it.npc_sell_price };
-  }
-  if (Object.keys(out.items).length < 100) throw new Error("trop peu d'items : source suspecte");
+  out.items = buildNpcItems(items, bazaar);
 } catch (e) {
   console.error(`[fetch-npc] ${e.message}`);
   out = { generatedAt: Date.now(), items: {} };   // la page retombera sur son propre chargement de secours

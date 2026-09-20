@@ -6,7 +6,7 @@ Les faits techniques cités ont été **vérifiés** (endpoints testés, version
 
 ## Déjà fait
 
-Flips PNJ (achat Bazaar → revente PNJ) · profils de risque · export / import · favoris avec mini-courbes · suivi des ordres et du profit réel · calendrier SkyBlock, Jacob's Contest et mesure de l'effet des événements · historique et meilleures heures · refonte visuelle et charte graphique (`brand.html`).
+Tests automatiques (95, dont un test de mutation) avec déploiement conditionné · actions GitHub à jour + Dependabot · flips PNJ (achat Bazaar → revente PNJ) · profils de risque · export / import · favoris avec mini-courbes · suivi des ordres et du profit réel · calendrier SkyBlock, Jacob's Contest et mesure de l'effet des événements · historique et meilleures heures · refonte visuelle et charte graphique (`brand.html`).
 
 ## Tableau récapitulatif
 
@@ -15,8 +15,8 @@ Trié par rapport U/D décroissant, puis par utilité. « Ancien n° » renvoie 
 | ID | Idée | Utilité | Difficulté | U/D | Effort | Dépendance / risque principal |
 |---|------|:------:|:---------:|:---:|:------:|-------------------------------|
 | 1 | Précision des estimations sur tes propres flips | 4 | 2 | **2,0** | ~3 h | Il faut quelques flips terminés pour que ce soit parlant |
-| 2 | Tests automatiques du moteur + CI (ancien 5) | 4 | 2 | **2,0** | ~6 h | Extraire le JS de `index.html` |
-| 3 | Mise à jour des actions GitHub | 2 | 1 | **2,0** | ~30 min | Versions majeures : tester via un déclenchement manuel |
+| 2 | ✅ **Fait** — Tests automatiques du moteur + CI (ancien 5) | 4 | 2 | **2,0** | ~6 h | Extraire le JS de `index.html` |
+| 3 | ✅ **Fait** — Mise à jour des actions GitHub | 2 | 1 | **2,0** | ~30 min | Versions majeures : tester via un déclenchement manuel |
 | 4 | Simulateur d'objectif (ancien 3) | 2 | 1 | **2,0** | ~1 h | Ordre de grandeur seulement |
 | 5 | Statut des sources de données | 2 | 1 | **2,0** | ~1 h | Aucune |
 | 6 | Accessibilité clavier et lecteurs d'écran | 3 | 2 | **1,5** | ~4 h | Aucune |
@@ -40,10 +40,10 @@ Trié par rapport U/D décroissant, puis par utilité. « Ancien n° » renvoie 
 ### 1. Précision des estimations sur tes propres flips — U4 · D2
 Le suivi enregistre déjà les dates de création, d'achat et de vente ainsi que les prix réels. Il manque les **prévisions au moment du suivi** (durée d'achat, durée de vente, profit). En les stockant, la page peut afficher : « tes achats prennent en moyenne 1,6× plus longtemps que prévu » et **proposer une valeur réaliste pour la « part de marché captée »**. C'est la version légère du backtest (idée 11) : elle utilise tes vrais flips, sans collecte de fond. **Limite** : peu parlant tant que tu n'as pas terminé quelques flips.
 
-### 2. Tests automatiques + CI — U4 · D2
+### 2. Tests automatiques + CI — U4 · D2 — ✅ fait
 Le cœur du produit (risque, durées, profit, mesure des événements, flips PNJ, validation des imports) n'a **aucun test**. Or ce code a beaucoup grossi, et la validation d'import est devenue critique côté sécurité. Une régression silencieuse fausserait les conseils sans que personne ne la voie. Il faut extraire ces fonctions dans un module et les tester (Node) à chaque push. Pas de gain visible, mais tout le reste devient plus sûr. J'ai relevé U de 3 à 4 pour cette raison.
 
-### 3. Mise à jour des actions GitHub — U2 · D1
+### 3. Mise à jour des actions GitHub — U2 · D1 — ✅ fait
 Vérifié : le workflow utilise `checkout` v4, `configure-pages` v5, `upload-pages-artifact` v3 et `deploy-pages` v4, alors que les dernières versions sont respectivement v7, v6, v5 et v5. GitHub a déjà affiché un avertissement (Node 20 déprécié) et annonce le passage de `ubuntu-latest` à Ubuntu 26 à partir du 19 octobre 2026. Tant que ça tourne, rien ne casse, mais un déploiement qui échoue silencieusement un jour est le genre de panne qu'on découvre trop tard.
 
 ### 4. Simulateur d'objectif — U2 · D1
